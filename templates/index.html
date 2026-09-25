@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mobility Operations Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Mobility Operations Intelligence Tool</h1>
+
+        <p>
+            Upload the required mobility datasets to validate
+            and load the data.
+        </p>
+
+        {% if errors %}
+            <div class="errors">
+                <h3>Validation Errors</h3>
+
+                <ul>
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <form action="{{ url_for('upload_files') }}"
+              method="POST"
+              enctype="multipart/form-data">
+
+            <label>Drivers CSV</label>
+            <input type="file" name="drivers" accept=".csv">
+
+            <label>Trips CSV</label>
+            <input type="file" name="trips" accept=".csv">
+
+            <label>Driver Activity CSV</label>
+            <input type="file" name="activities" accept=".csv">
+
+            <button type="submit">
+                Upload and Validate
+            </button>
+
+        </form>
+
+    </div>
+
+</body>
+</html>

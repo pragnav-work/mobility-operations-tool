@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Summary</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Loaded Data Summary</h1>
+
+        <p>
+            The uploaded datasets were loaded and converted
+            into Python objects.
+        </p>
+
+        {% if errors %}
+
+            <div class="errors">
+
+                <h3>Validation Issues Found</h3>
+
+                <p>
+                    The data was loaded successfully, but the following
+                    data-quality issues were detected:
+                </p>
+
+                <ul>
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+
+            </div>
+
+        {% else %}
+
+            <div class="success">
+
+                <h3>Validation Successful</h3>
+
+                <p>
+                    No validation issues were found.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+        <div class="summary">
+
+            <div class="card">
+                <h2>{{ summary.drivers }}</h2>
+                <p>Drivers</p>
+            </div>
+
+            <div class="card">
+                <h2>{{ summary.trips }}</h2>
+                <p>Trips</p>
+            </div>
+
+            <div class="card">
+                <h2>{{ summary.activities }}</h2>
+                <p>Activity Records</p>
+            </div>
+
+            <div class="card">
+                <h2>{{ summary.zones }}</h2>
+                <p>Zones</p>
+            </div>
+
+        </div>
+
+        <a href="{{ url_for('index') }}">
+            Upload another dataset
+        </a>
+
+    </div>
+
+</body>
+</html>
