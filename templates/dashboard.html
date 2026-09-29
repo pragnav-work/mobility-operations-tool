@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Data Summary</title>
+    <title>Mobility Operations Dashboard</title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='style.css') }}">
@@ -9,77 +9,245 @@
 
 <body>
 
-    <div class="container">
+<div class="container">
 
-        <h1>Loaded Data Summary</h1>
+    <h1>Mobility Operations Dashboard</h1>
 
-        <p>
-            The uploaded datasets were loaded and converted
-            into Python objects.
-        </p>
+    {% if errors %}
 
-        {% if errors %}
+        <div class="errors">
 
-            <div class="errors">
+            <h3>Validation Issues Found</h3>
 
-                <h3>Validation Issues Found</h3>
-
-                <p>
-                    The data was loaded successfully, but the following
-                    data-quality issues were detected:
-                </p>
-
-                <ul>
-                    {% for error in errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
-
-            </div>
-
-        {% else %}
-
-            <div class="success">
-
-                <h3>Validation Successful</h3>
-
-                <p>
-                    No validation issues were found.
-                </p>
-
-            </div>
-
-        {% endif %}
-
-        <div class="summary">
-
-            <div class="card">
-                <h2>{{ summary.drivers }}</h2>
-                <p>Drivers</p>
-            </div>
-
-            <div class="card">
-                <h2>{{ summary.trips }}</h2>
-                <p>Trips</p>
-            </div>
-
-            <div class="card">
-                <h2>{{ summary.activities }}</h2>
-                <p>Activity Records</p>
-            </div>
-
-            <div class="card">
-                <h2>{{ summary.zones }}</h2>
-                <p>Zones</p>
-            </div>
+            <ul>
+                {% for error in errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
 
         </div>
 
-        <a href="{{ url_for('index') }}">
-            Upload another dataset
-        </a>
+    {% endif %}
+
+
+    <!-- Dataset Summary -->
+
+    <h2>Dataset Summary</h2>
+
+    <div class="summary">
+
+        <div class="card">
+            <h2>{{ summary.drivers }}</h2>
+            <p>Total Drivers</p>
+        </div>
+
+        <div class="card">
+            <h2>{{ summary.trips }}</h2>
+            <p>Total Trips</p>
+        </div>
+
+        <div class="card">
+            <h2>{{ summary.activities }}</h2>
+            <p>Activity Records</p>
+        </div>
+
+        <div class="card">
+            <h2>{{ summary.zones }}</h2>
+            <p>Zones</p>
+        </div>
 
     </div>
+
+
+    <!-- Trip Analytics -->
+
+    <h2>Trip Analytics</h2>
+
+    <div class="summary">
+
+        <div class="card">
+            <h2>{{ trip_summary.total_trips }}</h2>
+            <p>Total Trips</p>
+        </div>
+
+        <div class="card">
+            <h2>{{ trip_summary.completed_trips }}</h2>
+            <p>Completed Trips</p>
+        </div>
+
+        <div class="card">
+            <h2>{{ trip_summary.cancelled_trips }}</h2>
+            <p>Cancelled Trips</p>
+        </div>
+
+        <div class="card">
+            <h2>{{ "%.2f"|format(trip_summary.total_revenue) }}</h2>
+            <p>Total Revenue</p>
+        </div>
+
+    </div>
+
+    <div class="summary">
+
+        <div class="card">
+            <h2>{{ "%.2f"|format(trip_summary.average_fare) }}</h2>
+            <p>Average Fare</p>
+        </div>
+
+        <div class="card">
+            <h2>{{ "%.2f"|format(trip_summary.average_distance) }}</h2>
+            <p>Average Distance</p>
+        </div>
+
+        <div class="card">
+            <h2>{{ "%.2f"|format(trip_summary.average_duration) }}</h2>
+            <p>Average Duration (min)</p>
+        </div>
+
+    </div>
+
+
+    <!-- Driver Analysis -->
+
+    <h2>Driver Analytics</h2>
+
+    <a href="{{ url_for('driver_analysis') }}">
+        Analyze Driver
+    </a>
+
+    <h2>Driver Rankings</h2>
+
+    <form action="{{ url_for('driver_rankings') }}"
+        method="POST">
+
+        <label>Ranking Metric</label>
+
+        <select name="metric">
+
+            <option value="completed_trips">
+                Completed Trips
+            </option>
+
+            <option value="revenue">
+                Revenue
+            </option>
+
+            <option value="cancellation_rate">
+                Cancellation Rate
+            </option>
+
+        </select>
+
+        <button type="submit">
+            Rank Drivers
+        </button>
+
+    </form>
+
+    {% if rankings %}
+
+        <div class="analysis">
+
+            <h3>Driver Ranking</h3>
+
+            {% for driver in rankings %}
+
+                <p>
+                    <strong>{{ loop.index }}.</strong>
+                    {{ driver.driver_id }}
+                    - {{ driver.driver_name }}
+
+                    {% if ranking_metric == "completed_trips" %}
+                        | Completed Trips: {{ driver.completed_trips }}
+
+                    {% elif ranking_metric == "revenue" %}
+                        | Revenue: {{ "%.2f"|format(driver.revenue) }}
+
+                    {% elif ranking_metric == "cancellation_rate" %}
+                        | Cancellation Rate:
+                        {{ "%.2f"|format(driver.cancellation_rate) }}%
+
+                    {% endif %}
+                </p>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- Zone Analysis -->
+
+    <h2>Zone Analytics</h2>
+
+    <a href="{{ url_for('zone_analysis') }}">
+        Analyze Zone
+    </a>
+
+
+    <!-- Search -->
+
+    <h2>Search</h2>
+
+    <form action="{{ url_for('search') }}"
+          method="POST">
+
+        <label>Search Type</label>
+
+        <select name="search_type">
+
+            <option value="driver">
+                Driver
+            </option>
+
+            <option value="trip">
+                Trip
+            </option>
+
+            <option value="zone">
+                Zone
+            </option>
+
+        </select>
+
+        <label>Search ID</label>
+
+        <input type="text"
+               name="search_id"
+               placeholder="Enter ID">
+
+        <button type="submit">
+            Search
+        </button>
+
+    </form>
+
+
+    {% if search_error %}
+
+        <div class="errors">
+            <p>{{ search_error }}</p>
+        </div>
+
+    {% endif %}
+
+
+    {% if search_result %}
+
+        <div class="success">
+
+            <h3>Search Result</h3>
+
+            <p>
+                {{ search_result.get_profile() }}
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</div>
 
 </body>
 </html>

@@ -41,3 +41,20 @@ class Trip:
         if self.distance_km > 0:
             return self.fare / self.distance_km
         return None
+
+    def get_profile(self):
+        return {
+            "trip_id": self.trip_id,
+            "driver_id": self.driver_id,
+            "rider_id": self.rider_id,
+            "city": self.city,
+            "pickup_zone": self.pickup_zone,
+            "drop_zone": self.drop_zone,
+            "request_time": self.request_time,
+            "pickup_time": self.pickup_time,
+            "drop_time": self.drop_time,
+            "distance_km": self.distance_km,
+            "fare": self.fare,
+            "status": self.status,
+            "cancellation_reason": self.cancellation_reason
+        }

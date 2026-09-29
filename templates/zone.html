@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zone Analytics</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Zone Analytics</h1>
+
+    <form action="{{ url_for('zone_analysis') }}"
+          method="POST">
+
+        <label>Select Zone</label>
+
+        <select name="zone_name">
+
+            {% for zone in zones %}
+
+                <option value="{{ zone.zone_name }}">
+                    {{ zone.zone_name }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <button type="submit">
+            Analyze
+        </button>
+
+    </form>
+
+
+    {% if search_error %}
+
+        <div class="errors">
+            <p>{{ search_error }}</p>
+        </div>
+
+    {% endif %}
+
+
+    {% if analysis %}
+
+        <h2>Zone Analytics</h2>
+
+        <div class="analysis">
+
+            <p>
+                <strong>Zone:</strong>
+                {{ analysis.zone }}
+            </p>
+
+            <p>
+                <strong>Total Requests:</strong>
+                {{ analysis.total_requests }}
+            </p>
+
+            <p>
+                <strong>Completed Trips:</strong>
+                {{ analysis.completed_trips }}
+            </p>
+
+            <p>
+                <strong>Cancelled Trips:</strong>
+                {{ analysis.cancelled_trips }}
+            </p>
+
+            <p>
+                <strong>Completion Rate:</strong>
+                {{ "%.2f"|format(analysis.completion_rate) }}%
+            </p>
+
+            <p>
+                <strong>Cancellation Rate:</strong>
+                {{ "%.2f"|format(analysis.cancellation_rate) }}%
+            </p>
+
+            <p>
+                <strong>Revenue:</strong>
+                {{ "%.2f"|format(analysis.revenue) }}
+            </p>
+
+            <p>
+                <strong>Average Fare:</strong>
+                {{ "%.2f"|format(analysis.average_fare) }}
+            </p>
+
+        </div>
+
+
+        <h2>Demand Distribution</h2>
+
+        <div class="analysis">
+
+            {% for time_slot, requests in demand_distribution.items() %}
+
+                <p>
+                    <strong>{{ time_slot }}</strong>:
+                    {{ requests }} requests
+                </p>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+
+    <br>
+
+    <a href="{{ url_for('index') }}">
+        Back
+    </a>
+
+</div>
+
+</body>
+</html>

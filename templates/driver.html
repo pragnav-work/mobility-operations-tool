@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Driver Analytics</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Driver Analytics</h1>
+
+    <form action="{{ url_for('driver_analysis') }}"
+          method="POST">
+
+        <label>Select Driver</label>
+
+        <select name="driver_id">
+
+            {% for driver in drivers %}
+
+                <option value="{{ driver.driver_id }}">
+                    {{ driver.driver_id }} - {{ driver.driver_name }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <button type="submit">
+            Analyze
+        </button>
+
+    </form>
+
+
+    {% if search_error %}
+
+        <div class="errors">
+            <p>{{ search_error }}</p>
+        </div>
+
+    {% endif %}
+
+
+    {% if analysis %}
+
+        <h2>Driver Performance</h2>
+
+        <div class="analysis">
+
+            <p>
+                <strong>Driver ID:</strong>
+                {{ analysis.driver_id }}
+            </p>
+
+            <p>
+                <strong>Driver:</strong>
+                {{ analysis.driver_name }}
+            </p>
+
+            <p>
+                <strong>City:</strong>
+                {{ analysis.city }}
+            </p>
+
+            <p>
+                <strong>Rating:</strong>
+                {{ analysis.rating }}
+            </p>
+
+            <p>
+                <strong>Status:</strong>
+                {{ analysis.status }}
+            </p>
+
+            <p>
+                <strong>Total Trips:</strong>
+                {{ analysis.total_trips }}
+            </p>
+
+            <p>
+                <strong>Completed:</strong>
+                {{ analysis.completed_trips }}
+            </p>
+
+            <p>
+                <strong>Cancelled:</strong>
+                {{ analysis.cancelled_trips }}
+            </p>
+
+            <p>
+                <strong>Completion Rate:</strong>
+                {{ "%.2f"|format(analysis.completion_rate) }}%
+            </p>
+
+            <p>
+                <strong>Cancellation Rate:</strong>
+                {{ "%.2f"|format(analysis.cancellation_rate) }}%
+            </p>
+
+            <p>
+                <strong>Revenue:</strong>
+                {{ "%.2f"|format(analysis.revenue) }}
+            </p>
+
+            <p>
+                <strong>Average Fare:</strong>
+                {{ "%.2f"|format(analysis.average_fare) }}
+            </p>
+
+            <p>
+                <strong>Average Distance:</strong>
+                {{ "%.2f"|format(analysis.average_distance) }}
+            </p>
+
+            <p>
+                <strong>Average Fare/KM:</strong>
+                {{ "%.2f"|format(analysis.average_fare_per_km) }}
+            </p>
+
+        </div>
+
+    {% endif %}
+
+
+    <br>
+
+    <a href="{{ url_for('index') }}">
+        Back
+    </a>
+
+</div>
+
+</body>
+</html>
