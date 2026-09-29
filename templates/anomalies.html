@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Anomaly Detection</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Operational Anomaly Detection</h1>
+
+    <p>
+        Configure thresholds and identify
+        unusual trips and driver behaviour.
+    </p>
+
+    <form action="{{ url_for('anomalies') }}"
+          method="POST">
+
+        <label>Long Trip Threshold (minutes)</label>
+
+        <input type="number"
+               name="long_duration"
+               value="{{ thresholds.long_duration }}"
+               min="1">
+
+        <label>Unusual Fare Multiplier</label>
+
+        <input type="number"
+               name="fare_multiplier"
+               value="{{ thresholds.fare_multiplier }}"
+               min="1"
+               step="0.1">
+
+        <label>High Cancellation Rate (%)</label>
+
+        <input type="number"
+               name="cancellation"
+               value="{{ thresholds.cancellation }}"
+               min="0"
+               max="100">
+
+        <label>Low Utilization (%)</label>
+
+        <input type="number"
+               name="utilization"
+               value="{{ thresholds.utilization }}"
+               min="0"
+               max="100">
+
+        <label>High Trip Count</label>
+
+        <input type="number"
+               name="trip_count"
+               value="{{ thresholds.trip_count }}"
+               min="1">
+
+        <label>Low Rating</label>
+
+        <input type="number"
+               name="rating"
+               value="{{ thresholds.rating }}"
+               min="0"
+               max="5"
+               step="0.1">
+
+        <button type="submit">
+            Detect Anomalies
+        </button>
+
+    </form>
+
+
+    <div class="analysis">
+
+        <h2>
+            {{ anomalies|length }}
+            Anomalies Detected
+        </h2>
+
+        {% if anomalies %}
+
+            {% for anomaly in anomalies %}
+
+                <div class="anomaly">
+
+                    <p>
+
+                        <strong>
+                            {{ anomaly.type }}:
+                        </strong>
+
+                        {{ anomaly.id }}
+
+                    </p>
+
+                    <p>
+                        <strong>Issue:</strong>
+                        {{ anomaly.issue }}
+                    </p>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <div class="success">
+
+                No anomalies detected
+                using the current thresholds.
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <p>
+
+        <a href="{{ url_for('dashboard') }}">
+            Back to Dashboard
+        </a>
+
+    </p>
+
+</div>
+
+</body>
+
+</html>
