@@ -1,3 +1,5 @@
+import heapq
+
 class DriverAnalyzer:
 
     def __init__(self, drivers, trips):
@@ -153,3 +155,33 @@ class DriverAnalyzer:
         )
 
         return driver_results
+    
+    def get_top_k_drivers(self, metric, k):
+
+        driver_results = []
+
+        for driver in self.drivers:
+
+            analysis = self.get_driver_analysis(
+                driver.driver_id
+            )
+
+            driver_results.append(analysis)
+
+        if metric == "completed_trips":
+
+            return heapq.nlargest(
+                k,
+                driver_results,
+                key=lambda x: x["completed_trips"]
+            )
+
+        if metric == "revenue":
+
+            return heapq.nlargest(
+                k,
+                driver_results,
+                key=lambda x: x["revenue"]
+            )
+
+        return []

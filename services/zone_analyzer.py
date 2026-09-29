@@ -1,3 +1,5 @@
+import heapq
+
 class ZoneAnalyzer:
 
     def __init__(self, trips):
@@ -107,3 +109,43 @@ class ZoneAnalyzer:
             zone_index[zone.zone_name] = zone
 
         return zone_index
+    
+    def get_top_k_zones(self, metric, k):
+
+        zone_data = {}
+
+        for trip in self.trips:
+
+            zone = trip.pickup_zone
+
+            if zone not in zone_data:
+                zone_data[zone] = {
+                    "zone": zone,
+                    "demand": 0,
+                    "cancellations": 0
+                }
+
+            zone_data[zone]["demand"] += 1
+
+            if trip.status.lower() == "cancelled":
+                zone_data[zone]["cancellations"] += 1
+
+        zones = list(zone_data.values())
+
+        if metric == "demand":
+
+            return heapq.nlargest(
+                k,
+                zones,
+                key=lambda x: x["demand"]
+            )
+
+        if metric == "cancellation":
+
+            return heapq.nlargest(
+                k,
+                zones,
+                key=lambda x: x["cancellations"]
+            )
+
+        return []

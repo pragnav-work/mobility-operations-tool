@@ -106,6 +106,36 @@
 
     </div>
 
+    <h2>Peak Demand</h2>
+
+    {% if peak_demand %}
+
+        <div class="analysis">
+
+            <p>
+                <strong>Peak Demand Period:</strong>
+                {{ peak_demand.peak_period }}
+            </p>
+
+            <p>
+                <strong>Requests:</strong>
+                {{ peak_demand.peak_requests }}
+            </p>
+
+            <h3>Demand by Time Period</h3>
+
+            {% for time_slot, requests in peak_demand.demand.items() %}
+
+                <p>
+                    <strong>{{ time_slot }}</strong>:
+                    {{ requests }} requests
+                </p>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
 
     <!-- Driver Analysis -->
 
@@ -176,7 +206,263 @@
 
     {% endif %}
 
+        <h2>Top-K Analysis</h2>
 
+        <form action="{{ url_for('top_k') }}"
+            method="POST">
+
+            <label>Metric</label>
+
+            <select name="metric">
+
+                <option value="completed_trips">
+                    Top Drivers by Completed Trips
+                </option>
+
+                <option value="revenue">
+                    Top Drivers by Revenue
+                </option>
+
+                <option value="zone_demand">
+                    Top Zones by Demand
+                </option>
+
+                <option value="zone_cancellation">
+                    Top Zones by Cancellation
+                </option>
+
+                <option value="rider_trips">
+                    Top Riders by Trip Count
+                </option>
+
+            </select>
+
+            <label>K</label>
+
+            <input type="number"
+                name="k"
+                value="5"
+                min="1">
+
+            <button type="submit">
+                Run Top-K
+            </button>
+
+        </form>
+
+
+        {% if top_k_results %}
+
+            <div class="analysis">
+
+                <h3>Top-K Results</h3>
+
+                {% for item in top_k_results %}
+
+                    <p>
+
+                        <strong>{{ loop.index }}.</strong>
+
+                        {% if top_k_metric == "completed_trips" %}
+
+                            {{ item.driver_id }}
+                            - {{ item.driver_name }}
+                            | Completed Trips:
+                            {{ item.completed_trips }}
+
+                        {% elif top_k_metric == "revenue" %}
+
+                            {{ item.driver_id }}
+                            - {{ item.driver_name }}
+                            | Revenue:
+                            {{ "%.2f"|format(item.revenue) }}
+
+                        {% elif top_k_metric == "zone_demand" %}
+
+                            {{ item.zone }}
+                            | Demand:
+                            {{ item.demand }}
+
+                        {% elif top_k_metric == "zone_cancellation" %}
+
+                            {{ item.zone }}
+                            | Cancellations:
+                            {{ item.cancellations }}
+
+                        {% elif top_k_metric == "rider_trips" %}
+
+                            {{ item.rider_id }}
+                            | Trips:
+                            {{ item.trip_count }}
+
+                        {% endif %}
+
+                    </p>
+
+                {% endfor %}
+
+            </div>
+
+        {% endif %}
+
+        <h2>Idle-Time Analysis</h2>
+
+        <form action="{{ url_for('idle_time_analysis') }}"
+            method="POST">
+
+            <label>Idle Threshold (minutes)</label>
+
+            <input type="number"
+                name="threshold"
+                value="30"
+                min="1">
+
+            <button type="submit">
+                Analyze Idle Time
+            </button>
+
+        </form>
+
+
+        {% if idle_periods %}
+
+            <div class="analysis">
+
+                <h3>Significant Idle Periods</h3>
+
+                {% for item in idle_periods %}
+
+                    <p>
+                        <strong>Driver:</strong>
+                        {{ item.driver_id }}
+
+                        |
+
+                        <strong>Previous Trip:</strong>
+                        {{ item.previous_trip }}
+
+                        |
+
+                        <strong>Next Trip:</strong>
+                        {{ item.next_trip }}
+
+                        |
+
+                        <strong>Idle Time:</strong>
+                        {{ "%.2f"|format(item.idle_minutes) }}
+                        minutes
+                    </p>
+
+                {% endfor %}
+
+            </div>
+
+        {% elif idle_periods is defined %}
+
+            <div class="success">
+                No idle periods found above
+                {{ idle_threshold }} minutes.
+            </div>
+
+        {% endif %}
+
+        <h2>Driver Utilization</h2>
+
+    <form action="{{ url_for('utilization') }}"
+        method="POST">
+
+        <label>High Utilization Threshold (%)</label>
+
+        <input type="number"
+            name="high_threshold"
+            value="70"
+            min="0"
+            max="100">
+
+        <label>Medium Utilization Threshold (%)</label>
+
+        <input type="number"
+            name="medium_threshold"
+            value="40"
+            min="0"
+            max="100">
+
+        <button type="submit">
+            Analyze Utilization
+        </button>
+
+    </form>
+
+
+    {% if utilization_results %}
+
+        <div class="analysis">
+
+            <h3>Driver Utilization</h3>
+
+            {% for driver in utilization_results %}
+
+                <p>
+                    <strong>Driver:</strong>
+                    {{ driver.driver_id }}
+
+                    |
+
+                    <strong>Online:</strong>
+                    {{ "%.2f"|format(driver.online_hours) }} hrs
+
+                    |
+
+                    <strong>Busy:</strong>
+                    {{ "%.2f"|format(driver.busy_hours) }} hrs
+
+                    |
+
+                    <strong>Idle:</strong>
+                    {{ "%.2f"|format(driver.idle_hours) }} hrs
+
+                    |
+
+                    <strong>Utilization:</strong>
+                    {{ "%.2f"|format(driver.utilization) }}%
+
+                    |
+
+                    <strong>Classification:</strong>
+                    {{ driver.classification }}
+                </p>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+    <h2>Cancellation Intelligence</h2>
+
+{% if cancellation_intelligence %}
+
+    <div class="analysis">
+
+        <h3>Cancellation Reasons</h3>
+
+        {% for item in cancellation_intelligence %}
+
+            <p>
+                <strong>{{ item.reason }}</strong>
+
+                |
+                {{ item.count }} cancellations
+
+                |
+                {{ "%.2f"|format(item.percentage) }}%
+            </p>
+
+        {% endfor %}
+
+    </div>
+
+{% endif %}
     <!-- Zone Analysis -->
 
     <h2>Zone Analytics</h2>

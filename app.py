@@ -7,7 +7,7 @@ from services.validation_service import DataValidator
 from services.driver_analyzer import DriverAnalyzer
 from services.trip_analyzer import TripAnalyzer
 from services.zone_analyzer import ZoneAnalyzer
-
+from services.utilization_analyzer import UtilizationAnalyzer
 
 app = Flask(__name__)
 
@@ -28,6 +28,7 @@ zones = []
 driver_analyzer = None
 trip_analyzer = None
 zone_analyzer = None
+utilization_analyzer = None
 
 driver_index = {}
 trip_index = {}
@@ -52,6 +53,7 @@ def upload_files():
     global driver_index
     global trip_index
     global zone_index
+    global utilization_analyzer
 
     drivers_file = request.files.get("drivers")
     trips_file = request.files.get("trips")
@@ -157,6 +159,8 @@ def upload_files():
 
     zone_analyzer = ZoneAnalyzer(trips)
 
+    utilization_analyzer = UtilizationAnalyzer(activities)
+
     # Create dictionary indexes for search.
     driver_index = driver_analyzer.get_driver_index()
 
@@ -180,12 +184,18 @@ def upload_files():
         "average_distance": trip_analyzer.get_average_distance(),
         "average_duration": trip_analyzer.get_average_duration()
     }
+    
+    peak_demand = trip_analyzer.get_peak_demand()
 
     return render_template(
         "dashboard.html",
         summary=summary,
         trip_summary=trip_summary,
-        errors=validation_errors
+        errors=validation_errors,
+        peak_demand=trip_analyzer.get_peak_demand(),
+        cancellation_intelligence=(
+        trip_analyzer.get_cancellation_intelligence()
+    )
     )
 
 
@@ -297,6 +307,10 @@ def search():
 
     return render_template(
         "dashboard.html",
+        peak_demand=trip_analyzer.get_peak_demand(),
+        cancellation_intelligence=(
+        trip_analyzer.get_cancellation_intelligence()
+    ),
         summary={
             "drivers": len(drivers),
             "trips": len(trips),
@@ -324,7 +338,7 @@ def driver_rankings():
         return render_template(
             "index.html",
             errors=["Please upload the datasets first."]
-        )
+        ),
 
     metric = request.form.get("metric")
 
@@ -351,6 +365,12 @@ def driver_rankings():
 
     return render_template(
         "dashboard.html",
+        peak_demand=trip_analyzer.get_peak_demand(),
+
+        cancellation_intelligence=(
+        trip_analyzer.get_cancellation_intelligence()
+    ),
+        
         summary={
             "drivers": len(drivers),
             "trips": len(trips),
@@ -370,6 +390,189 @@ def driver_rankings():
         rankings=rankings,
         ranking_metric=metric
     )
+@app.route("/top-k", methods=["POST"])
+def top_k():
 
+    if driver_analyzer is None:
+        return render_template(
+            "index.html",
+            errors=["Please upload the datasets first."]
+        )
+
+    metric = request.form.get("metric")
+
+    k = request.form.get("k")
+
+    try:
+        k = int(k)
+    except ValueError:
+        k = 5
+
+    results = []
+
+    if metric == "completed_trips":
+
+        results = driver_analyzer.get_top_k_drivers(
+            "completed_trips",
+            k
+        )
+
+    elif metric == "revenue":
+
+        results = driver_analyzer.get_top_k_drivers(
+            "revenue",
+            k
+        )
+
+    elif metric == "zone_demand":
+
+        results = zone_analyzer.get_top_k_zones(
+            "demand",
+            k
+        )
+
+    elif metric == "zone_cancellation":
+
+        results = zone_analyzer.get_top_k_zones(
+            "cancellation",
+            k
+        )
+
+    elif metric == "rider_trips":
+
+        results = trip_analyzer.get_top_k_riders(k)
+
+    return render_template(
+        "dashboard.html",
+        peak_demand=trip_analyzer.get_peak_demand(),
+        cancellation_intelligence=(
+        trip_analyzer.get_cancellation_intelligence()
+    ),
+        summary={
+            "drivers": len(drivers),
+            "trips": len(trips),
+            "activities": len(activities),
+            "zones": len(zones)
+        },
+        trip_summary={
+            "total_trips": trip_analyzer.get_total_trips(),
+            "completed_trips": trip_analyzer.get_completed_trips(),
+            "cancelled_trips": trip_analyzer.get_cancelled_trips(),
+            "total_revenue": trip_analyzer.get_total_revenue(),
+            "average_fare": trip_analyzer.get_average_fare(),
+            "average_distance": trip_analyzer.get_average_distance(),
+            "average_duration": trip_analyzer.get_average_duration()
+        },
+        errors=[],
+        top_k_results=results,
+        top_k_metric=metric
+    )
+
+@app.route("/idle-time", methods=["POST"])
+def idle_time_analysis():
+
+    if trip_analyzer is None:
+        return render_template(
+            "index.html",
+            errors=["Please upload the datasets first."]
+        )
+
+    threshold = request.form.get("threshold")
+
+    try:
+        threshold = float(threshold)
+    except ValueError:
+        threshold = 30
+
+    idle_periods = trip_analyzer.get_idle_time_analysis(
+        threshold
+    )
+
+    return render_template(
+        "dashboard.html",
+        peak_demand=trip_analyzer.get_peak_demand(),
+        cancellation_intelligence=(
+        trip_analyzer.get_cancellation_intelligence()
+    ),
+        summary={
+            "drivers": len(drivers),
+            "trips": len(trips),
+            "activities": len(activities),
+            "zones": len(zones)
+        },
+        trip_summary={
+            "total_trips": trip_analyzer.get_total_trips(),
+            "completed_trips": trip_analyzer.get_completed_trips(),
+            "cancelled_trips": trip_analyzer.get_cancelled_trips(),
+            "total_revenue": trip_analyzer.get_total_revenue(),
+            "average_fare": trip_analyzer.get_average_fare(),
+            "average_distance": trip_analyzer.get_average_distance(),
+            "average_duration": trip_analyzer.get_average_duration()
+        },
+        errors=[],
+        idle_periods=idle_periods,
+        idle_threshold=threshold
+    )
+
+@app.route("/utilization", methods=["POST"])
+def utilization():
+
+    if utilization_analyzer is None:
+        return render_template(
+            "index.html",
+            errors=["Please upload the datasets first."]
+        )
+
+    high_threshold = request.form.get(
+        "high_threshold"
+    )
+
+    medium_threshold = request.form.get(
+        "medium_threshold"
+    )
+
+    try:
+        high_threshold = float(high_threshold)
+    except ValueError:
+        high_threshold = 70
+
+    try:
+        medium_threshold = float(medium_threshold)
+    except ValueError:
+        medium_threshold = 40
+
+    utilization_results = (
+        utilization_analyzer.get_driver_utilization(
+            high_threshold,
+            medium_threshold
+        )
+    )
+
+    return render_template(
+        "dashboard.html",
+        peak_demand=trip_analyzer.get_peak_demand(),
+        cancellation_intelligence=(
+        trip_analyzer.get_cancellation_intelligence()
+    ),
+        summary={
+            "drivers": len(drivers),
+            "trips": len(trips),
+            "activities": len(activities),
+            "zones": len(zones)
+        },
+        trip_summary={
+            "total_trips": trip_analyzer.get_total_trips(),
+            "completed_trips": trip_analyzer.get_completed_trips(),
+            "cancelled_trips": trip_analyzer.get_cancelled_trips(),
+            "total_revenue": trip_analyzer.get_total_revenue(),
+            "average_fare": trip_analyzer.get_average_fare(),
+            "average_distance": trip_analyzer.get_average_distance(),
+            "average_duration": trip_analyzer.get_average_duration()
+        },
+        errors=[],
+        utilization_results=utilization_results,
+        high_threshold=high_threshold,
+        medium_threshold=medium_threshold
+    )
 if __name__ == "__main__":
     app.run(debug=True)
