@@ -1,35 +1,38 @@
 import heapq
 
+
 class ZoneAnalyzer:
 
     def __init__(self, trips):
         self.trips = trips
 
-    def get_zone_analysis(self, zone_name):
+    def get_zone_analysis(
+        self,
+        zone_name
+    ):
 
-        zone_trips = []
-
-        for trip in self.trips:
-
-            if (
-                trip.pickup_zone == zone_name
-                or trip.drop_zone == zone_name
-            ):
-                zone_trips.append(trip)
-
-        total_requests = len(zone_trips)
-
+        total_requests = 0
         completed_trips = 0
         cancelled_trips = 0
         revenue = 0
 
-        for trip in zone_trips:
+        for trip in self.trips:
+
+            if (
+                trip.pickup_zone != zone_name
+                and trip.drop_zone != zone_name
+            ):
+                continue
+
+            total_requests += 1
 
             if trip.is_completed():
+
                 completed_trips += 1
                 revenue += trip.fare
 
             if trip.status.lower() == "cancelled":
+
                 cancelled_trips += 1
 
         completion_rate = 0
@@ -39,15 +42,21 @@ class ZoneAnalyzer:
         if total_requests > 0:
 
             completion_rate = (
-                completed_trips / total_requests
+                completed_trips
+                / total_requests
             ) * 100
 
             cancellation_rate = (
-                cancelled_trips / total_requests
+                cancelled_trips
+                / total_requests
             ) * 100
 
         if completed_trips > 0:
-            average_fare = revenue / completed_trips
+
+            average_fare = (
+                revenue
+                / completed_trips
+            )
 
         return {
             "zone": zone_name,
@@ -60,7 +69,10 @@ class ZoneAnalyzer:
             "average_fare": average_fare
         }
 
-    def get_demand_distribution(self, zone_name):
+    def get_demand_distribution(
+        self,
+        zone_name
+    ):
 
         distribution = {
             "06-09": 0,
@@ -106,11 +118,18 @@ class ZoneAnalyzer:
         zone_index = {}
 
         for zone in zones:
-            zone_index[zone.zone_name] = zone
+
+            zone_index[
+                zone.zone_name
+            ] = zone
 
         return zone_index
-    
-    def get_top_k_zones(self, metric, k):
+
+    def get_top_k_zones(
+        self,
+        metric,
+        k
+    ):
 
         zone_data = {}
 
@@ -119,6 +138,7 @@ class ZoneAnalyzer:
             zone = trip.pickup_zone
 
             if zone not in zone_data:
+
                 zone_data[zone] = {
                     "zone": zone,
                     "demand": 0,
@@ -128,9 +148,14 @@ class ZoneAnalyzer:
             zone_data[zone]["demand"] += 1
 
             if trip.status.lower() == "cancelled":
-                zone_data[zone]["cancellations"] += 1
 
-        zones = list(zone_data.values())
+                zone_data[zone][
+                    "cancellations"
+                ] += 1
+
+        zones = list(
+            zone_data.values()
+        )
 
         if metric == "demand":
 
@@ -145,7 +170,8 @@ class ZoneAnalyzer:
             return heapq.nlargest(
                 k,
                 zones,
-                key=lambda x: x["cancellations"]
+                key=lambda x:
+                    x["cancellations"]
             )
 
         return []

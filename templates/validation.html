@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Data Validation</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="page-shell">
+
+    <div class="page-top">
+
+        <div>
+            <span class="eyebrow">STEP 2</span>
+            <h1>Data Validation</h1>
+        </div>
+
+        <div class="page-actions">
+
+            <a class="secondary-button"
+               href="{{ url_for('index') }}">
+                Home
+            </a>
+
+            {% if data_loaded %}
+
+                <a class="primary-button small-button"
+                   href="{{ url_for('analysis') }}">
+                    Analysis →
+                </a>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <section class="panel">
+
+        <div class="section-heading">
+
+            <div>
+                <h2>Validation Checks Performed</h2>
+
+                <p class="muted">
+                    The uploaded files were checked before the
+                    analytics objects were created.
+                </p>
+            </div>
+
+        </div>
+
+
+        <ul class="check-list">
+
+            <li>Required columns and file structure</li>
+            <li>Empty files and file-reading issues</li>
+            <li>Missing values</li>
+            <li>Duplicate records</li>
+            <li>Invalid driver and trip IDs</li>
+            <li>Unknown driver references</li>
+            <li>Invalid timestamps</li>
+            <li>Negative fares and distances</li>
+            <li>Invalid trip durations</li>
+
+        </ul>
+
+    </section>
+
+
+    <section class="panel">
+
+        <div class="section-heading">
+
+            <div>
+                <span class="eyebrow">RESULTS</span>
+                <h2>Validation Results</h2>
+            </div>
+
+            {% if errors %}
+                <span class="status-pill warning-pill">
+                    {{ errors|length }} issue{% if errors|length != 1 %}s{% endif %}
+                </span>
+            {% else %}
+                <span class="status-pill success-pill">
+                    No issues found
+                </span>
+            {% endif %}
+
+        </div>
+
+
+        {% if grouped_errors %}
+
+            <div class="validation-groups">
+
+                {% for category, category_errors in grouped_errors.items() %}
+
+                    <details class="accordion">
+
+                        <summary>
+
+                            <span>{{ category }}</span>
+
+                            <span class="count-badge">
+                                {{ category_errors|length }}
+                            </span>
+
+                        </summary>
+
+                        <div class="accordion-content">
+
+                            {% for error in category_errors %}
+
+                                <div class="validation-row">
+                                    {{ error }}
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </details>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state success-state">
+
+                <h3>Validation completed successfully</h3>
+
+                <p>
+                    No validation issues were detected in the
+                    uploaded datasets.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    {% if data_loaded %}
+
+        <div class="next-step">
+
+            <div>
+                <strong>Validation complete.</strong>
+
+                <span>
+                    Continue to the analysis dashboard.
+                </span>
+            </div>
+
+            <a class="primary-button"
+               href="{{ url_for('analysis') }}">
+                Continue to Analysis →
+            </a>
+
+        </div>
+
+    {% endif %}
+
+
+    <footer class="page-footer">
+        Mobility Marketplace Operations Intelligence Engine
+    </footer>
+
+</div>
+
+</body>
+</html>

@@ -2,671 +2,793 @@
 <html>
 
 <head>
-
-    <title>Mobility Operations Dashboard</title>
+    <title>Mobility Operations Analysis</title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='style.css') }}">
-
 </head>
 
 <body>
 
-<div class="container">
+<div class="page-shell">
 
-    <div class="top-bar">
+    <div class="page-top">
 
-        <h1>Mobility Operations Intelligence</h1>
+        <div>
+            <span class="eyebrow">STEP 3</span>
+            <h1>Operational Analysis</h1>
 
-        <a class="dashboard-link"
-           href="{{ url_for('dashboard') }}">
-            Dashboard
-        </a>
-
-    </div>
-
-
-    {% if errors %}
-
-        <div class="errors">
-
-            <h3>Data Validation</h3>
-
-            <ul>
-
-                {% for error in errors %}
-                    <li>{{ error }}</li>
-                {% endfor %}
-
-            </ul>
-
-        </div>
-
-    {% endif %}
-
-
-    <h2>Dataset Summary</h2>
-
-    <div class="summary">
-
-        <div class="card">
-            <strong>Drivers</strong>
-            <br>
-            {{ summary.drivers }}
-        </div>
-
-        <div class="card">
-            <strong>Trips</strong>
-            <br>
-            {{ summary.trips }}
-        </div>
-
-        <div class="card">
-            <strong>Activities</strong>
-            <br>
-            {{ summary.activities }}
-        </div>
-
-        <div class="card">
-            <strong>Zones</strong>
-            <br>
-            {{ summary.zones }}
-        </div>
-
-    </div>
-
-
-    <h2>Trip Analytics</h2>
-
-    <div class="summary">
-
-        <div class="card">
-            <strong>Total Trips</strong>
-            <br>
-            {{ trip_summary.total_trips }}
-        </div>
-
-        <div class="card">
-            <strong>Completed</strong>
-            <br>
-            {{ trip_summary.completed_trips }}
-        </div>
-
-        <div class="card">
-            <strong>Cancelled</strong>
-            <br>
-            {{ trip_summary.cancelled_trips }}
-        </div>
-
-        <div class="card">
-            <strong>Revenue</strong>
-            <br>
-            {{ "%.2f"|format(trip_summary.total_revenue) }}
-        </div>
-
-        <div class="card">
-            <strong>Average Fare</strong>
-            <br>
-            {{ "%.2f"|format(trip_summary.average_fare) }}
-        </div>
-
-        <div class="card">
-            <strong>Average Distance</strong>
-            <br>
-            {{ "%.2f"|format(trip_summary.average_distance) }}
-        </div>
-
-    </div>
-
-
-    <div class="navigation">
-
-        <a href="{{ url_for('driver_analysis') }}">
-            Driver Analytics
-        </a>
-
-        <a href="{{ url_for('zone_analysis') }}">
-            Zone Analytics
-        </a>
-
-        <a href="{{ url_for('anomalies') }}">
-            Anomaly Detection
-        </a>
-
-    </div>
-
-
-    <h2>Search</h2>
-
-    <form action="{{ url_for('search') }}"
-          method="POST">
-
-        <label>Search Type</label>
-
-        <select name="search_type">
-
-            <option value="driver">Driver</option>
-            <option value="trip">Trip</option>
-            <option value="zone">Zone</option>
-
-        </select>
-
-        <label>Search ID / Name</label>
-
-        <input type="text"
-               name="search_id"
-               placeholder="Example: D101">
-
-        <button type="submit">
-            Search
-        </button>
-
-    </form>
-
-
-    {% if search_error %}
-
-        <div class="errors">
-            {{ search_error }}
-        </div>
-
-    {% endif %}
-
-
-    {% if search_result %}
-
-        <div class="analysis">
-
-            <h3>Search Result</h3>
-
-            {% set profile = search_result.get_profile() %}
-
-            {% for key, value in profile.items() %}
-
-                <p>
-                    <strong>{{ key }}:</strong>
-                    {{ value }}
-                </p>
-
-            {% endfor %}
-
-        </div>
-
-    {% endif %}
-
-
-    <details>
-
-        <summary>
-            Driver Rankings
-        </summary>
-
-        <form action="{{ url_for('driver_rankings') }}"
-              method="POST">
-
-            <label>Ranking Metric</label>
-
-            <select name="metric">
-
-                <option value="completed_trips">
-                    Completed Trips
-                </option>
-
-                <option value="revenue">
-                    Revenue
-                </option>
-
-                <option value="cancellation_rate">
-                    Cancellation Rate
-                </option>
-
-            </select>
-
-            <button type="submit">
-                Rank Drivers
-            </button>
-
-        </form>
-
-
-        {% if rankings %}
-
-            <div class="result-box">
-
-                {% for driver in rankings %}
-
-                    <p>
-
-                        <strong>
-                            {{ loop.index }}.
-                        </strong>
-
-                        {{ driver.driver_id }}
-                        -
-                        {{ driver.driver_name }}
-
-                        {% if ranking_metric == "completed_trips" %}
-
-                            | Completed:
-                            {{ driver.completed_trips }}
-
-                        {% elif ranking_metric == "revenue" %}
-
-                            | Revenue:
-                            {{ "%.2f"|format(driver.revenue) }}
-
-                        {% elif ranking_metric == "cancellation_rate" %}
-
-                            | Cancellation:
-                            {{ "%.2f"|format(
-                                driver.cancellation_rate
-                            ) }}%
-
-                        {% endif %}
-
-                    </p>
-
-                {% endfor %}
-
-            </div>
-
-        {% endif %}
-
-    </details>
-
-
-    <details>
-
-        <summary>
-            Top-K Analysis
-        </summary>
-
-        <form action="{{ url_for('top_k') }}"
-              method="POST">
-
-            <label>Metric</label>
-
-            <select name="metric">
-
-                <option value="completed_trips">
-                    Top Drivers by Completed Trips
-                </option>
-
-                <option value="revenue">
-                    Top Drivers by Revenue
-                </option>
-
-                <option value="zone_demand">
-                    Top Zones by Demand
-                </option>
-
-                <option value="zone_cancellation">
-                    Top Zones by Cancellation
-                </option>
-
-                <option value="rider_trips">
-                    Top Riders by Trip Count
-                </option>
-
-            </select>
-
-            <label>K</label>
-
-            <input type="number"
-                   name="k"
-                   value="5"
-                   min="1">
-
-            <button type="submit">
-                Run Top-K
-            </button>
-
-        </form>
-
-
-        {% if top_k_results %}
-
-            <div class="result-box">
-
-                {% for item in top_k_results %}
-
-                    <p>
-
-                        <strong>
-                            {{ loop.index }}.
-                        </strong>
-
-                        {% if top_k_metric == "completed_trips" %}
-
-                            {{ item.driver_id }}
-                            -
-                            {{ item.driver_name }}
-
-                            | Completed:
-                            {{ item.completed_trips }}
-
-                        {% elif top_k_metric == "revenue" %}
-
-                            {{ item.driver_id }}
-                            -
-                            {{ item.driver_name }}
-
-                            | Revenue:
-                            {{ "%.2f"|format(item.revenue) }}
-
-                        {% elif top_k_metric == "zone_demand" %}
-
-                            {{ item.zone }}
-                            | Demand:
-                            {{ item.demand }}
-
-                        {% elif top_k_metric == "zone_cancellation" %}
-
-                            {{ item.zone }}
-                            | Cancellations:
-                            {{ item.cancellations }}
-
-                        {% elif top_k_metric == "rider_trips" %}
-
-                            {{ item.rider_id }}
-                            | Trips:
-                            {{ item.trip_count }}
-
-                        {% endif %}
-
-                    </p>
-
-                {% endfor %}
-
-            </div>
-
-        {% endif %}
-
-    </details>
-
-
-    <details>
-
-        <summary>
-            Idle-Time Analysis
-        </summary>
-
-        <form action="{{ url_for('idle_time_analysis') }}"
-              method="POST">
-
-            <label>Idle Threshold (minutes)</label>
-
-            <input type="number"
-                   name="threshold"
-                   value="30"
-                   min="1">
-
-            <button type="submit">
-                Analyze Idle Time
-            </button>
-
-        </form>
-
-
-        {% if idle_periods %}
-
-            <div class="result-box">
-
-                {% for item in idle_periods %}
-
-                    <p>
-
-                        <strong>
-                            Driver:
-                        </strong>
-
-                        {{ item.driver_id }}
-
-                        |
-
-                        Previous:
-                        {{ item.previous_trip }}
-
-                        |
-
-                        Next:
-                        {{ item.next_trip }}
-
-                        |
-
-                        Idle:
-                        {{ "%.2f"|format(
-                            item.idle_minutes
-                        ) }}
-                        minutes
-
-                    </p>
-
-                {% endfor %}
-
-            </div>
-
-        {% elif idle_periods is defined %}
-
-            <div class="success">
-
-                No idle periods found above
-                {{ idle_threshold }} minutes.
-
-            </div>
-
-        {% endif %}
-
-    </details>
-
-
-    <details>
-
-        <summary>
-            Driver Utilization
-        </summary>
-
-        <form action="{{ url_for('utilization') }}"
-              method="POST">
-
-            <label>
-                High Utilization Threshold (%)
-            </label>
-
-            <input type="number"
-                   name="high_threshold"
-                   value="70"
-                   min="0"
-                   max="100">
-
-            <label>
-                Medium Utilization Threshold (%)
-            </label>
-
-            <input type="number"
-                   name="medium_threshold"
-                   value="40"
-                   min="0"
-                   max="100">
-
-            <button type="submit">
-                Analyze Utilization
-            </button>
-
-        </form>
-
-
-        {% if utilization_results %}
-
-            <div class="result-box">
-
-                {% for driver in utilization_results %}
-
-                    <p>
-
-                        <strong>
-                            {{ driver.driver_id }}
-                        </strong>
-
-                        |
-
-                        Online:
-                        {{ "%.2f"|format(
-                            driver.online_hours
-                        ) }}
-                        hrs
-
-                        |
-
-                        Busy:
-                        {{ "%.2f"|format(
-                            driver.busy_hours
-                        ) }}
-                        hrs
-
-                        |
-
-                        Idle:
-                        {{ "%.2f"|format(
-                            driver.idle_hours
-                        ) }}
-                        hrs
-
-                        |
-
-                        Utilization:
-                        {{ "%.2f"|format(
-                            driver.utilization
-                        ) }}%
-
-                        |
-
-                        {{ driver.classification }}
-
-                    </p>
-
-                {% endfor %}
-
-            </div>
-
-        {% endif %}
-
-    </details>
-
-
-    <h2>Peak Demand</h2>
-
-    {% if peak_demand %}
-
-        <div class="analysis">
-
-            <p>
-                <strong>Peak Period:</strong>
-                {{ peak_demand.peak_period }}
+            <p class="muted">
+                All metrics below are calculated from the uploaded datasets.
             </p>
-
-            <p>
-                <strong>Requests:</strong>
-                {{ peak_demand.peak_requests }}
-            </p>
-
-            {% for time_slot, requests
-                  in peak_demand.demand.items() %}
-
-                <p>
-                    <strong>{{ time_slot }}</strong>:
-                    {{ requests }} requests
-                </p>
-
-            {% endfor %}
-
         </div>
 
-    {% endif %}
+        <div class="page-actions">
 
+            <a class="secondary-button"
+               href="{{ url_for('validation') }}">
+                Validation
+            </a>
 
-    <h2>Cancellation Intelligence</h2>
-
-    {% if cancellation_intelligence %}
-
-        <div class="result-box">
-
-            {% for item in cancellation_intelligence %}
-
-                <p>
-
-                    <strong>
-                        {{ item.reason }}
-                    </strong>
-
-                    |
-
-                    {{ item.count }}
-                    cancellations
-
-                    |
-
-                    {{ "%.2f"|format(
-                        item.percentage
-                    ) }}%
-
-                </p>
-
-            {% endfor %}
+            <a class="secondary-button"
+               href="{{ url_for('index') }}">
+                Home
+            </a>
 
         </div>
-
-    {% endif %}
-
-
-    <h2>Operational Insights</h2>
-
-    {% if insights %}
-
-        <div class="insights">
-
-            {% for insight in insights %}
-
-                <p>
-
-                    <strong>
-                        {{ loop.index }}.
-                    </strong>
-
-                    {{ insight }}
-
-                </p>
-
-            {% endfor %}
-
-        </div>
-
-    {% endif %}
-
-
-    <h2>Operational Anomalies</h2>
-
-    <div class="analysis">
-
-        <p>
-
-            <strong>
-                {{ anomalies|length }}
-            </strong>
-
-            anomalies detected.
-
-        </p>
-
-        <a href="{{ url_for('anomalies') }}">
-            Configure and View Anomalies
-        </a>
 
     </div>
 
+
+    <section class="panel">
+
+        <div class="section-heading">
+
+            <div>
+                <span class="eyebrow">OVERVIEW</span>
+                <h2>Operational Summary</h2>
+            </div>
+
+        </div>
+
+
+        <div class="kpi-grid">
+
+            <div class="kpi-card">
+                <span>Drivers</span>
+                <strong>{{ summary.drivers|integer }}</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Active Drivers</span>
+                <strong>{{ summary.active_drivers|integer }}</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Riders</span>
+                <strong>{{ summary.riders|integer }}</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Total Trips</span>
+                <strong>{{ trip_summary.total_trips|integer }}</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Completed Trips</span>
+                <strong>{{ trip_summary.completed_trips|integer }}</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Cancelled Trips</span>
+                <strong>{{ trip_summary.cancelled_trips|integer }}</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Completion Rate</span>
+                <strong>{{ "%.2f"|format(trip_summary.completion_rate) }}%</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Cancellation Rate</span>
+                <strong>{{ "%.2f"|format(trip_summary.cancellation_rate) }}%</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Total Revenue</span>
+                <strong>₹ {{ trip_summary.total_revenue|number }}</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Average Fare</span>
+                <strong>₹ {{ trip_summary.average_fare|number }}</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Average Distance</span>
+                <strong>{{ trip_summary.average_distance|number }} km</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Average Duration</span>
+                <strong>{{ trip_summary.average_duration|number }} min</strong>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <section class="panel">
+
+        <div class="section-heading">
+
+            <div>
+                <span class="eyebrow">CORE ANALYTICS</span>
+                <h2>Choose an Analysis</h2>
+
+                <p class="muted">
+                    Open a dedicated page for the main analytical modules.
+                </p>
+            </div>
+
+        </div>
+
+
+        <div class="analysis-card-grid">
+
+            <a class="analysis-card"
+               href="{{ url_for('driver_analysis') }}">
+
+                <span class="analysis-icon">01</span>
+
+                <h3>Driver Analytics</h3>
+
+                <p>
+                    Examine individual driver performance,
+                    trips, completion, cancellation and revenue.
+                </p>
+
+                <span class="card-action">
+                    Open Driver Analytics →
+                </span>
+
+            </a>
+
+
+            <a class="analysis-card"
+               href="{{ url_for('zone_analysis') }}">
+
+                <span class="analysis-icon">02</span>
+
+                <h3>Zone Analytics</h3>
+
+                <p>
+                    Examine requests, cancellations, revenue
+                    and demand distribution by zone.
+                </p>
+
+                <span class="card-action">
+                    Open Zone Analytics →
+                </span>
+
+            </a>
+
+
+            <a class="analysis-card"
+               href="{{ url_for('anomalies') }}">
+
+                <span class="analysis-icon">03</span>
+
+                <h3>Anomaly Detection</h3>
+
+                <p>
+                    Identify unusual trips and driver behaviour
+                    using configurable thresholds.
+                </p>
+
+                <span class="card-action">
+                    Open Anomaly Detection →
+                </span>
+
+            </a>
+
+        </div>
+
+    </section>
+
+
+    <section class="panel">
+
+        <div class="section-heading">
+
+            <div>
+                <span class="eyebrow">ADVANCED ANALYTICS</span>
+                <h2>Explore Operational Patterns</h2>
+
+                <p class="muted">
+                    Click a section to expand it. Open sections stay open
+                    until you close them.
+                </p>
+            </div>
+
+        </div>
+
+
+        <details class="accordion analysis-accordion"
+                 {% if open_section == "search" %}open{% endif %}>
+
+            <summary>
+                <span>Search</span>
+                <span class="summary-note">
+                    Dictionary / hash-map lookup
+                </span>
+            </summary>
+
+            <div class="accordion-content">
+
+                <form action="{{ url_for('search') }}"
+                      method="POST"
+                      class="inline-form">
+
+                    <div>
+                        <label>Search Type</label>
+
+                        <select name="search_type">
+
+                            <option value="driver">Driver</option>
+                            <option value="trip">Trip</option>
+                            <option value="zone">Zone</option>
+
+                        </select>
+                    </div>
+
+                    <div>
+                        <label>Search ID / Name</label>
+
+                        <input type="text"
+                               name="search_id"
+                               placeholder="Example: D101"
+                               required>
+                    </div>
+
+                    <button class="primary-button"
+                            type="submit">
+                        Search
+                    </button>
+
+                </form>
+
+
+                {% if search_error %}
+
+                    <div class="alert error-alert">
+                        {{ search_error }}
+                    </div>
+
+                {% endif %}
+
+
+                {% if search_result %}
+
+                    <div class="result-panel">
+
+                        <h3>Search Result</h3>
+
+                        {% set profile = search_result.get_profile() %}
+
+                        {% for key, value in profile.items() %}
+
+                            <div class="data-row">
+
+                                <strong>{{ key }}</strong>
+
+                                <span>{{ value }}</span>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </details>
+
+
+        <details class="accordion analysis-accordion"
+                 {% if open_section == "rankings" %}open{% endif %}>
+
+            <summary>
+                <span>Driver Rankings</span>
+                <span class="summary-note">
+                    Sorting and ranking
+                </span>
+            </summary>
+
+            <div class="accordion-content">
+
+                <form action="{{ url_for('driver_rankings') }}"
+                      method="POST"
+                      class="inline-form">
+
+                    <div>
+                        <label>Ranking Metric</label>
+
+                        <select name="metric">
+
+                            <option value="completed_trips">
+                                Completed Trips
+                            </option>
+
+                            <option value="revenue">
+                                Revenue
+                            </option>
+
+                            <option value="cancellation_rate">
+                                Cancellation Rate
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <button class="primary-button"
+                            type="submit">
+                        Rank Drivers
+                    </button>
+
+                </form>
+
+
+                {% if rankings %}
+
+                    <div class="result-panel scroll-results">
+
+                        {% for driver in rankings %}
+
+                            <div class="ranking-row">
+
+                                <span class="rank-number">
+                                    {{ loop.index }}
+                                </span>
+
+                                <strong>
+                                    {{ driver.driver_id }}
+                                    — {{ driver.driver_name }}
+                                </strong>
+
+                                <span>
+
+                                    {% if ranking_metric == "completed_trips" %}
+
+                                        Completed:
+                                        {{ driver.completed_trips|integer }}
+
+                                    {% elif ranking_metric == "revenue" %}
+
+                                        Revenue:
+                                        ₹ {{ driver.revenue|number }}
+
+                                    {% elif ranking_metric == "cancellation_rate" %}
+
+                                        Cancellation:
+                                        {{ "%.2f"|format(driver.cancellation_rate) }}%
+
+                                    {% endif %}
+
+                                </span>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </details>
+
+
+        <details class="accordion analysis-accordion"
+                 {% if open_section == "top_k" %}open{% endif %}>
+
+            <summary>
+                <span>Top-K Analysis</span>
+                <span class="summary-note">
+                    Heap / priority queue
+                </span>
+            </summary>
+
+            <div class="accordion-content">
+
+                <form action="{{ url_for('top_k') }}"
+                      method="POST"
+                      class="inline-form">
+
+                    <div>
+                        <label>Analysis</label>
+
+                        <select name="metric">
+
+                            <option value="completed_trips">
+                                Top Drivers — Completed Trips
+                            </option>
+
+                            <option value="revenue">
+                                Top Drivers — Revenue
+                            </option>
+
+                            <option value="zone_demand">
+                                Top Zones — Demand
+                            </option>
+
+                            <option value="zone_cancellation">
+                                Top Zones — Cancellations
+                            </option>
+
+                            <option value="rider_trips">
+                                Top Riders — Trips
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div>
+                        <label>K</label>
+
+                        <input type="number"
+                               name="k"
+                               value="5"
+                               min="1">
+                    </div>
+
+                    <button class="primary-button"
+                            type="submit">
+                        Run Top-K
+                    </button>
+
+                </form>
+
+
+                {% if top_k_results %}
+
+                    <div class="result-panel scroll-results">
+
+                        {% for item in top_k_results %}
+
+                            <div class="data-row">
+
+                                <strong>
+                                    {{ loop.index }}.
+                                </strong>
+
+                                <span>
+                                    {{ item }}
+                                </span>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </details>
+
+
+        <details class="accordion analysis-accordion"
+                 {% if open_section == "idle" %}open{% endif %}>
+
+            <summary>
+                <span>Idle-Time Analysis</span>
+                <span class="summary-note">
+                    Sequential trip gaps
+                </span>
+            </summary>
+
+            <div class="accordion-content">
+
+                <form action="{{ url_for('idle_time_analysis') }}"
+                      method="POST"
+                      class="inline-form">
+
+                    <div>
+                        <label>Idle Threshold (minutes)</label>
+
+                        <input type="number"
+                               name="threshold"
+                               value="30"
+                               min="1">
+                    </div>
+
+                    <button class="primary-button"
+                            type="submit">
+                        Analyze Idle Time
+                    </button>
+
+                </form>
+
+
+                {% if idle_periods %}
+
+                    <div class="result-panel scroll-results">
+
+                        {% for item in idle_periods %}
+
+                            <div class="data-row">
+
+                                <strong>
+                                    {{ item.driver_id }}
+                                </strong>
+
+                                <span>
+                                    {{ item }}
+                                </span>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </details>
+
+
+        <details class="accordion analysis-accordion"
+                 {% if open_section == "utilization" %}open{% endif %}>
+
+            <summary>
+                <span>Driver Utilization</span>
+                <span class="summary-note">
+                    Online, busy, idle and utilization
+                </span>
+            </summary>
+
+            <div class="accordion-content">
+
+                <form action="{{ url_for('utilization') }}"
+                      method="POST"
+                      class="inline-form">
+
+                    <div>
+                        <label>High Utilization Threshold (%)</label>
+
+                        <input type="number"
+                               name="high_threshold"
+                               value="{{ high_threshold|default(70) }}"
+                               min="0"
+                               max="100">
+                    </div>
+
+                    <div>
+                        <label>Medium Utilization Threshold (%)</label>
+
+                        <input type="number"
+                               name="medium_threshold"
+                               value="{{ medium_threshold|default(40) }}"
+                               min="0"
+                               max="100">
+                    </div>
+
+                    <button class="primary-button"
+                            type="submit">
+                        Analyze Utilization
+                    </button>
+
+                </form>
+
+
+                {% if utilization_results %}
+
+                    <div class="result-panel scroll-results">
+
+                        {% for driver in utilization_results %}
+
+                            <div class="utilization-row">
+
+                                <strong>
+                                    {{ driver.driver_id }}
+                                </strong>
+
+                                <span>
+                                    Online:
+                                    {{ "%.2f"|format(driver.online_hours) }} hrs
+                                </span>
+
+                                <span>
+                                    Busy:
+                                    {{ "%.2f"|format(driver.busy_hours) }} hrs
+                                </span>
+
+                                <span>
+                                    Idle:
+                                    {{ "%.2f"|format(driver.idle_hours) }} hrs
+                                </span>
+
+                                <span>
+                                    Utilization:
+                                    {{ "%.2f"|format(driver.utilization) }}%
+                                </span>
+
+                                <span class="status-pill">
+                                    {{ driver.classification }}
+                                </span>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </details>
+
+
+        <details class="accordion analysis-accordion">
+
+            <summary>
+                <span>Peak Demand</span>
+                <span class="summary-note">
+                    Demand by time period
+                </span>
+            </summary>
+
+            <div class="accordion-content">
+
+                {% if peak_demand %}
+
+                    <div class="highlight-box">
+
+                        <strong>
+                            Peak Period:
+                            {{ peak_demand.peak_period }}
+                        </strong>
+
+                        <span>
+                            {{ peak_demand.peak_requests|integer }}
+                            requests
+                        </span>
+
+                    </div>
+
+
+                    <div class="result-panel">
+
+                        {% for time_slot, requests in peak_demand.demand.items() %}
+
+                            <div class="data-row">
+
+                                <strong>{{ time_slot }}</strong>
+
+                                <span>
+                                    {{ requests|integer }} requests
+                                </span>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </details>
+
+
+        <details class="accordion analysis-accordion">
+
+            <summary>
+                <span>Cancellation Intelligence</span>
+                <span class="summary-note">
+                    Frequency, grouping and sorting
+                </span>
+            </summary>
+
+            <div class="accordion-content">
+
+                {% if cancellation_intelligence %}
+
+                    <div class="result-panel">
+
+                        {% for item in cancellation_intelligence %}
+
+                            <div class="data-row">
+
+                                <strong>
+                                    {{ item.reason }}
+                                </strong>
+
+                                <span>
+                                    {{ item.count|integer }}
+                                    cancellations
+                                    —
+                                    {{ "%.2f"|format(item.percentage) }}%
+                                </span>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <div class="empty-state">
+                        No cancellation data available.
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </details>
+
+
+        <details class="accordion analysis-accordion">
+
+            <summary>
+                <span>Operational Insights</span>
+                <span class="summary-note">
+                    Dynamically generated
+                </span>
+            </summary>
+
+            <div class="accordion-content">
+
+                {% if insights %}
+
+                    <div class="insight-list">
+
+                        {% for insight in insights %}
+
+                            <div class="insight-item">
+
+                                <span>{{ loop.index }}</span>
+
+                                <p>{{ insight }}</p>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <div class="empty-state">
+                        No operational insights were generated.
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </details>
+
+    </section>
+
+
+    <footer class="page-footer">
+        Mobility Marketplace Operations Intelligence Engine
+    </footer>
 
 </div>
 
 </body>
-
 </html>

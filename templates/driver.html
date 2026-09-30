@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Driver Analytics</title>
 
@@ -9,129 +10,176 @@
 
 <body>
 
-<div class="container">
+<div class="page-shell">
 
-    <h1>Driver Analytics</h1>
+    <div class="page-top">
 
-    <form action="{{ url_for('driver_analysis') }}"
-          method="POST">
-
-        <label>Select Driver</label>
-
-        <select name="driver_id">
-
-            {% for driver in drivers %}
-
-                <option value="{{ driver.driver_id }}">
-                    {{ driver.driver_id }} - {{ driver.driver_name }}
-                </option>
-
-            {% endfor %}
-
-        </select>
-
-        <button type="submit">
-            Analyze
-        </button>
-
-    </form>
-
-
-    {% if search_error %}
-
-        <div class="errors">
-            <p>{{ search_error }}</p>
+        <div>
+            <span class="eyebrow">CORE ANALYTICS</span>
+            <h1>Driver Analytics</h1>
         </div>
 
-    {% endif %}
+        <div class="page-actions">
+
+            <a class="secondary-button"
+               href="{{ url_for('analysis') }}">
+                Analysis
+            </a>
+
+            <a class="secondary-button"
+               href="{{ url_for('index') }}">
+                Home
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <section class="panel">
+
+        <div class="section-heading">
+
+            <div>
+                <h2>Select Driver</h2>
+
+                <p class="muted">
+                    Driver IDs are matched without case sensitivity.
+                </p>
+            </div>
+
+        </div>
+
+
+        <form action="{{ url_for('driver_analysis') }}"
+              method="POST"
+              class="inline-form">
+
+            <div>
+                <label>Driver</label>
+
+                <select name="driver_id">
+
+                    {% for driver in drivers %}
+
+                        <option value="{{ driver.driver_id }}">
+                            {{ driver.driver_id }} — {{ driver.driver_name }}
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+            </div>
+
+            <button class="primary-button"
+                    type="submit">
+                Analyze Driver
+            </button>
+
+        </form>
+
+
+        {% if search_error %}
+
+            <div class="alert error-alert">
+                {{ search_error }}
+            </div>
+
+        {% endif %}
+
+    </section>
 
 
     {% if analysis %}
 
-        <h2>Driver Performance</h2>
+        <section class="panel">
 
-        <div class="analysis">
+            <div class="section-heading">
 
-            <p>
-                <strong>Driver ID:</strong>
-                {{ analysis.driver_id }}
-            </p>
+                <div>
+                    <span class="eyebrow">RESULT</span>
+                    <h2>{{ analysis.driver_name }}</h2>
+                </div>
 
-            <p>
-                <strong>Driver:</strong>
-                {{ analysis.driver_name }}
-            </p>
+                <span class="status-pill">
+                    {{ analysis.status }}
+                </span>
 
-            <p>
-                <strong>City:</strong>
-                {{ analysis.city }}
-            </p>
+            </div>
 
-            <p>
-                <strong>Rating:</strong>
-                {{ analysis.rating }}
-            </p>
 
-            <p>
-                <strong>Status:</strong>
-                {{ analysis.status }}
-            </p>
+            <div class="detail-grid">
 
-            <p>
-                <strong>Total Trips:</strong>
-                {{ analysis.total_trips }}
-            </p>
+                <div class="detail-item">
+                    <span>Driver ID</span>
+                    <strong>{{ analysis.driver_id }}</strong>
+                </div>
 
-            <p>
-                <strong>Completed:</strong>
-                {{ analysis.completed_trips }}
-            </p>
+                <div class="detail-item">
+                    <span>City</span>
+                    <strong>{{ analysis.city }}</strong>
+                </div>
 
-            <p>
-                <strong>Cancelled:</strong>
-                {{ analysis.cancelled_trips }}
-            </p>
+                <div class="detail-item">
+                    <span>Rating</span>
+                    <strong>{{ "%.2f"|format(analysis.rating) }}</strong>
+                </div>
 
-            <p>
-                <strong>Completion Rate:</strong>
-                {{ "%.2f"|format(analysis.completion_rate) }}%
-            </p>
+                <div class="detail-item">
+                    <span>Total Trips</span>
+                    <strong>{{ analysis.total_trips|integer }}</strong>
+                </div>
 
-            <p>
-                <strong>Cancellation Rate:</strong>
-                {{ "%.2f"|format(analysis.cancellation_rate) }}%
-            </p>
+                <div class="detail-item">
+                    <span>Completed</span>
+                    <strong>{{ analysis.completed_trips|integer }}</strong>
+                </div>
 
-            <p>
-                <strong>Revenue:</strong>
-                {{ "%.2f"|format(analysis.revenue) }}
-            </p>
+                <div class="detail-item">
+                    <span>Cancelled</span>
+                    <strong>{{ analysis.cancelled_trips|integer }}</strong>
+                </div>
 
-            <p>
-                <strong>Average Fare:</strong>
-                {{ "%.2f"|format(analysis.average_fare) }}
-            </p>
+                <div class="detail-item">
+                    <span>Completion Rate</span>
+                    <strong>{{ "%.2f"|format(analysis.completion_rate) }}%</strong>
+                </div>
 
-            <p>
-                <strong>Average Distance:</strong>
-                {{ "%.2f"|format(analysis.average_distance) }}
-            </p>
+                <div class="detail-item">
+                    <span>Cancellation Rate</span>
+                    <strong>{{ "%.2f"|format(analysis.cancellation_rate) }}%</strong>
+                </div>
 
-            <p>
-                <strong>Average Fare/KM:</strong>
-                {{ "%.2f"|format(analysis.average_fare_per_km) }}
-            </p>
+                <div class="detail-item">
+                    <span>Revenue</span>
+                    <strong>₹ {{ analysis.revenue|number }}</strong>
+                </div>
 
-        </div>
+                <div class="detail-item">
+                    <span>Average Fare</span>
+                    <strong>₹ {{ analysis.average_fare|number }}</strong>
+                </div>
+
+                <div class="detail-item">
+                    <span>Average Distance</span>
+                    <strong>{{ analysis.average_distance|number }} km</strong>
+                </div>
+
+                <div class="detail-item">
+                    <span>Average Fare / KM</span>
+                    <strong>₹ {{ analysis.average_fare_per_km|number }}</strong>
+                </div>
+
+            </div>
+
+        </section>
 
     {% endif %}
 
 
-    <br>
-
-    <a href="{{ url_for('dashboard') }}">
-    Back to Dashboard
-    </a>
+    <footer class="page-footer">
+        Mobility Marketplace Operations Intelligence Engine
+    </footer>
 
 </div>
 

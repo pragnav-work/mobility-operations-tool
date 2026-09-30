@@ -1,53 +1,202 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <title>Mobility Operations Tool</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Mobility Operations Intelligence</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
 
-    <div class="container">
+<div class="page-shell">
 
-        <h1>Mobility Operations Intelligence Tool</h1>
+    <header class="hero">
+
+        <div class="hero-badge">
+            MOBILITY OPERATIONS
+        </div>
+
+        <h1>Mobility Operations Intelligence</h1>
 
         <p>
-            Upload the required mobility datasets to validate
-            and load the data.
+            Upload your mobility datasets, validate the data,
+            and explore operational analytics.
         </p>
 
-        {% if errors %}
-            <div class="errors">
-                <h3>Validation Errors</h3>
+    </header>
 
-                <ul>
-                    {% for error in errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
+
+    <section class="panel upload-panel">
+
+        <div class="section-heading">
+            <div>
+                <span class="eyebrow">STEP 1</span>
+                <h2>Upload Documents</h2>
             </div>
+        </div>
+
+        {% if errors %}
+
+            <div class="alert error-alert">
+
+                {% for error in errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+
+            </div>
+
         {% endif %}
+
 
         <form action="{{ url_for('upload_files') }}"
               method="POST"
-              enctype="multipart/form-data">
+              enctype="multipart/form-data"
+              class="upload-form">
 
-            <label>Drivers CSV</label>
-            <input type="file" name="drivers" accept=".csv">
+            <div class="file-field">
 
-            <label>Trips CSV</label>
-            <input type="file" name="trips" accept=".csv">
+                <label for="drivers">
+                    Drivers CSV
+                </label>
 
-            <label>Driver Activity CSV</label>
-            <input type="file" name="activities" accept=".csv">
+                <input id="drivers"
+                       type="file"
+                       name="drivers"
+                       accept=".csv"
+                       required>
 
-            <button type="submit">
-                Upload and Validate
+            </div>
+
+
+            <div class="file-field">
+
+                <label for="trips">
+                    Trips CSV
+                </label>
+
+                <input id="trips"
+                       type="file"
+                       name="trips"
+                       accept=".csv"
+                       required>
+
+            </div>
+
+
+            <div class="file-field">
+
+                <label for="activities">
+                    Driver Activity CSV
+                </label>
+
+                <input id="activities"
+                       type="file"
+                       name="activities"
+                       accept=".csv"
+                       required>
+
+            </div>
+
+
+            <button class="primary-button"
+                    type="submit">
+                Upload & Validate
             </button>
 
         </form>
 
-    </div>
+    </section>
+
+
+    <section class="choice-grid">
+
+        {% if data_loaded %}
+
+            <a class="choice-card active-card"
+               href="{{ url_for('validation') }}">
+
+                <span class="choice-number">01</span>
+
+                <h2>Validation</h2>
+
+                <p>
+                    Review the validation checks performed
+                    on the uploaded datasets.
+                </p>
+
+                <span class="card-action">
+                    Open Validation →
+                </span>
+
+            </a>
+
+
+            <a class="choice-card active-card"
+               href="{{ url_for('analysis') }}">
+
+                <span class="choice-number">02</span>
+
+                <h2>Analysis</h2>
+
+                <p>
+                    Explore KPIs, driver analytics, zone analytics,
+                    DSA analysis, anomalies and insights.
+                </p>
+
+                <span class="card-action">
+                    Open Analysis →
+                </span>
+
+            </a>
+
+        {% else %}
+
+            <div class="choice-card locked-card">
+
+                <span class="choice-number">01</span>
+
+                <h2>Validation</h2>
+
+                <p>
+                    Upload the three datasets above to unlock validation.
+                </p>
+
+                <span class="locked-label">
+                    Locked until upload
+                </span>
+
+            </div>
+
+
+            <div class="choice-card locked-card">
+
+                <span class="choice-number">02</span>
+
+                <h2>Analysis</h2>
+
+                <p>
+                    Upload and validate your datasets before viewing
+                    operational analysis.
+                </p>
+
+                <span class="locked-label">
+                    Locked until upload
+                </span>
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <footer class="page-footer">
+        Mobility Marketplace Operations Intelligence Engine
+    </footer>
+
+</div>
 
 </body>
 </html>

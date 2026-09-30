@@ -1,6 +1,7 @@
 import os
 
 from flask import Flask, render_template, request
+from werkzeug.utils import secure_filename
 
 from services.data_loader import DataLoader
 from services.validation_service import DataValidator
@@ -48,7 +49,135 @@ def normalize_key(value):
     return str(value).strip().casefold()
 
 
-def load_saved_data():
+@app.template_filter("number")
+def format_number(value):
+    try:
+        return f"{float(value):,.2f}"
+    except (ValueError, TypeError):
+        return value
+
+
+@app.template_filter("integer")
+def format_integer(value):
+    try:
+        return f"{int(value):,}"
+    except (ValueError, TypeError):
+        return value
+
+
+def reset_application_data():
+    global drivers
+    global trips
+    global activities
+    global zones
+
+    global driver_analyzer
+    global trip_analyzer
+    global zone_analyzer
+    global utilization_analyzer
+
+    global driver_index
+    global trip_index
+    global zone_index
+
+    global validation_errors
+
+    drivers = []
+    trips = []
+    activities = []
+    zones = []
+
+    driver_analyzer = None
+    trip_analyzer = None
+    zone_analyzer = None
+    utilization_analyzer = None
+
+    driver_index = {}
+    trip_index = {}
+    zone_index = {}
+
+    validation_errors = []
+
+
+def data_is_loaded():
+    return (
+        driver_analyzer is not None
+        and trip_analyzer is not None
+        and zone_analyzer is not None
+        and utilization_analyzer is not None
+    )
+
+
+def group_validation_errors(errors):
+    groups = {
+        "Missing Values": [],
+        "Duplicate Records": [],
+        "Invalid IDs": [],
+        "Invalid Timestamps": [],
+        "Negative Values": [],
+        "Invalid Trip Duration": [],
+        "Missing Columns / File Structure": [],
+        "Other Validation Issues": []
+    }
+
+    for error in errors:
+
+        text = str(error).lower()
+
+        if "duplicate" in text:
+            category = "Duplicate Records"
+
+        elif (
+            "missing column" in text
+            or "required column" in text
+            or "empty file" in text
+            or "read error" in text
+        ):
+            category = "Missing Columns / File Structure"
+
+        elif (
+            "unknown driver" in text
+            or "invalid id" in text
+            or "driver id" in text and "invalid" in text
+        ):
+            category = "Invalid IDs"
+
+        elif (
+            "timestamp" in text
+            or "date" in text and "invalid" in text
+        ):
+            category = "Invalid Timestamps"
+
+        elif (
+            "negative fare" in text
+            or "negative distance" in text
+            or "negative value" in text
+        ):
+            category = "Negative Values"
+
+        elif (
+            "duration" in text
+            or "drop time" in text
+            or "pickup time" in text and "drop" in text
+        ):
+            category = "Invalid Trip Duration"
+
+        elif "missing" in text:
+            category = "Missing Values"
+
+        else:
+            category = "Other Validation Issues"
+
+        groups[category].append(error)
+
+    return {
+        key: value
+        for key, value in groups.items()
+        if value
+    }
+
+
+def load_uploaded_data():
 
     global drivers
     global trips
@@ -81,13 +210,6 @@ def load_saved_data():
         "driver_activity.csv"
     )
 
-    if not (
-        os.path.exists(drivers_path)
-        and os.path.exists(trips_path)
-        and os.path.exists(activities_path)
-    ):
-        return False
-
     validation_errors = []
 
     validation_errors.extend(
@@ -111,6 +233,7 @@ def load_saved_data():
         )
     )
 
+    # Structural problems prevent object creation.
     if validation_errors:
         return False
 
@@ -135,6 +258,8 @@ def load_saved_data():
         )
     )
 
+    # Row-level validation errors are displayed, but valid objects
+    # are still created so the evaluator can inspect the analytics.
     drivers = loader.load_drivers(
         drivers_path
     )
@@ -201,10 +326,11 @@ def load_saved_data():
 
 def ensure_data_loaded():
 
-    if driver_analyzer is not None:
-        return True
-
-    return load_saved_data()
+    # Important:
+    # Do not reload old files from data/uploads/.
+    # Data becomes available only after the current application
+    # receives an upload.
+    return data_is_loaded()
 
 
 def get_dashboard_context():
@@ -272,83 +398,136 @@ def get_dashboard_context():
             trip_analyzer.get_peak_demand()
         )
 
+    active_drivers = 0
+
+    for driver in drivers:
+        if driver.is_active():
+            active_drivers += 1
+
+    rider_ids = set()
+
+    for trip in trips:
+        if trip.rider_id:
+            rider_ids.add(trip.rider_id)
+
+    total_trips = (
+        trip_analyzer.get_total_trips()
+        if trip_analyzer
+        else 0
+    )
+
+    completed_trips = (
+        trip_analyzer.get_completed_trips()
+        if trip_analyzer
+        else 0
+    )
+
+    cancelled_trips = (
+        trip_analyzer.get_cancelled_trips()
+        if trip_analyzer
+        else 0
+    )
+
+    completion_rate = 0
+    cancellation_rate = 0
+
+    if total_trips > 0:
+        completion_rate = (
+            completed_trips / total_trips
+        ) * 100
+
+        cancellation_rate = (
+            cancelled_trips / total_trips
+        ) * 100
+
     return {
         "summary": {
             "drivers": len(drivers),
+            "active_drivers": active_drivers,
+            "riders": len(rider_ids),
             "trips": len(trips),
             "activities": len(activities),
             "zones": len(zones)
         },
 
         "trip_summary": {
-            "total_trips": (
-                trip_analyzer.get_total_trips()
-                if trip_analyzer else 0
-            ),
-
-            "completed_trips": (
-                trip_analyzer.get_completed_trips()
-                if trip_analyzer else 0
-            ),
-
-            "cancelled_trips": (
-                trip_analyzer.get_cancelled_trips()
-                if trip_analyzer else 0
-            ),
-
+            "total_trips": total_trips,
+            "completed_trips": completed_trips,
+            "cancelled_trips": cancelled_trips,
+            "completion_rate": completion_rate,
+            "cancellation_rate": cancellation_rate,
             "total_revenue": (
                 trip_analyzer.get_total_revenue()
-                if trip_analyzer else 0
+                if trip_analyzer
+                else 0
             ),
-
             "average_fare": (
                 trip_analyzer.get_average_fare()
-                if trip_analyzer else 0
+                if trip_analyzer
+                else 0
             ),
-
             "average_distance": (
                 trip_analyzer.get_average_distance()
-                if trip_analyzer else 0
+                if trip_analyzer
+                else 0
             ),
-
             "average_duration": (
                 trip_analyzer.get_average_duration()
-                if trip_analyzer else 0
+                if trip_analyzer
+                else 0
             )
         },
 
         "peak_demand": peak_demand,
-
-        "cancellation_intelligence":
-            cancellation_intelligence,
-
-        "utilization_results":
-            utilization_results,
-
-        "anomalies":
-            anomalies,
-
-        "insights":
-            insights
+        "cancellation_intelligence": cancellation_intelligence,
+        "utilization_results": utilization_results,
+        "anomalies": anomalies,
+        "insights": insights
     }
 
 
 @app.route("/")
 def index():
+
     return render_template(
-        "index.html"
+        "index.html",
+        data_loaded=data_is_loaded()
     )
 
 
-@app.route("/dashboard")
-def dashboard():
+@app.route("/validation")
+def validation():
 
     if not ensure_data_loaded():
 
         return render_template(
             "index.html",
+            data_loaded=False,
             errors=[
-                "Please upload the datasets first."
+                "Upload the three datasets before opening validation."
+            ]
+        )
+
+    return render_template(
+        "validation.html",
+        errors=validation_errors,
+        grouped_errors=group_validation_errors(
+            validation_errors
+        ),
+        data_loaded=True
+    )
+
+
+@app.route("/analysis")
+def analysis():
+
+    if not ensure_data_loaded():
+
+        return render_template(
+            "index.html",
+            data_loaded=False,
+            errors=[
+                "Upload the three datasets before opening analysis."
             ]
         )
 
@@ -362,22 +541,20 @@ def dashboard():
     )
 
 
+@app.route("/dashboard")
+def dashboard():
+
+    return analysis()
+
+
 @app.route("/upload", methods=["POST"])
 def upload_files():
 
-    global validation_errors
+    reset_application_data()
 
-    drivers_file = request.files.get(
-        "drivers"
-    )
-
-    trips_file = request.files.get(
-        "trips"
-    )
-
-    activities_file = request.files.get(
-        "activities"
-    )
+    drivers_file = request.files.get("drivers")
+    trips_file = request.files.get("trips")
+    activities_file = request.files.get("activities")
 
     if (
         not drivers_file
@@ -387,6 +564,7 @@ def upload_files():
 
         return render_template(
             "index.html",
+            data_loaded=False,
             errors=[
                 "Please upload all three CSV files."
             ]
@@ -419,20 +597,24 @@ def upload_files():
         activities_path
     )
 
-    if not load_saved_data():
+    if not load_uploaded_data():
 
         return render_template(
-            "index.html",
-            errors=validation_errors
+            "validation.html",
+            errors=validation_errors,
+            grouped_errors=group_validation_errors(
+                validation_errors
+            ),
+            data_loaded=False
         )
 
-    context = get_dashboard_context()
-
-    context["errors"] = validation_errors
-
     return render_template(
-        "dashboard.html",
-        **context
+        "validation.html",
+        errors=validation_errors,
+        grouped_errors=group_validation_errors(
+            validation_errors
+        ),
+        data_loaded=True
     )
 
 
@@ -443,19 +625,18 @@ def driver_analysis():
 
         return render_template(
             "index.html",
+            data_loaded=False,
             errors=[
-                "Please upload the datasets first."
+                "Upload the three datasets before opening driver analytics."
             ]
         )
 
-    analysis = None
+    analysis_result = None
     search_error = None
 
     if request.method == "POST":
 
-        driver_id = request.form.get(
-            "driver_id"
-        )
+        driver_id = request.form.get("driver_id")
 
         driver = driver_index.get(
             normalize_key(driver_id)
@@ -467,7 +648,7 @@ def driver_analysis():
 
         else:
 
-            analysis = (
+            analysis_result = (
                 driver_analyzer.get_driver_analysis(
                     driver.driver_id
                 )
@@ -476,7 +657,7 @@ def driver_analysis():
     return render_template(
         "driver.html",
         drivers=drivers,
-        analysis=analysis,
+        analysis=analysis_result,
         search_error=search_error
     )
 
@@ -488,20 +669,19 @@ def zone_analysis():
 
         return render_template(
             "index.html",
+            data_loaded=False,
             errors=[
-                "Please upload the datasets first."
+                "Upload the three datasets before opening zone analytics."
             ]
         )
 
-    analysis = None
+    analysis_result = None
     demand_distribution = None
     search_error = None
 
     if request.method == "POST":
 
-        zone_name = request.form.get(
-            "zone_name"
-        )
+        zone_name = request.form.get("zone_name")
 
         zone = zone_index.get(
             normalize_key(zone_name)
@@ -513,7 +693,7 @@ def zone_analysis():
 
         else:
 
-            analysis = (
+            analysis_result = (
                 zone_analyzer.get_zone_analysis(
                     zone.zone_name
                 )
@@ -528,7 +708,7 @@ def zone_analysis():
     return render_template(
         "zone.html",
         zones=zones,
-        analysis=analysis,
+        analysis=analysis_result,
         demand_distribution=demand_distribution,
         search_error=search_error
     )
@@ -541,25 +721,19 @@ def search():
 
         return render_template(
             "index.html",
+            data_loaded=False,
             errors=[
-                "Please upload the datasets first."
+                "Upload the three datasets before searching."
             ]
         )
 
-    search_type = request.form.get(
-        "search_type"
-    )
-
-    search_id = request.form.get(
-        "search_id"
-    )
+    search_type = request.form.get("search_type")
+    search_id = request.form.get("search_id")
 
     result = None
     search_error = None
 
-    search_key = normalize_key(
-        search_id
-    )
+    search_key = normalize_key(search_id)
 
     if search_type == "driver":
 
@@ -581,15 +755,13 @@ def search():
 
     if result is None:
 
-        search_error = (
-            "No matching result found."
-        )
+        search_error = "No matching result found."
 
     context = get_dashboard_context()
 
-    context["errors"] = []
     context["search_result"] = result
     context["search_error"] = search_error
+    context["open_section"] = "search"
 
     return render_template(
         "dashboard.html",
@@ -604,14 +776,13 @@ def driver_rankings():
 
         return render_template(
             "index.html",
+            data_loaded=False,
             errors=[
-                "Please upload the datasets first."
+                "Upload the three datasets before ranking drivers."
             ]
         )
 
-    metric = request.form.get(
-        "metric"
-    )
+    metric = request.form.get("metric")
 
     if metric == "completed_trips":
 
@@ -640,9 +811,9 @@ def driver_rankings():
 
     context = get_dashboard_context()
 
-    context["errors"] = []
     context["rankings"] = rankings
     context["ranking_metric"] = metric
+    context["open_section"] = "rankings"
 
     return render_template(
         "dashboard.html",
@@ -657,18 +828,14 @@ def top_k():
 
         return render_template(
             "index.html",
+            data_loaded=False,
             errors=[
-                "Please upload the datasets first."
+                "Upload the three datasets before running Top-K analysis."
             ]
         )
 
-    metric = request.form.get(
-        "metric"
-    )
-
-    k = request.form.get(
-        "k"
-    )
+    metric = request.form.get("metric")
+    k = request.form.get("k")
 
     try:
 
@@ -685,53 +852,43 @@ def top_k():
 
     if metric == "completed_trips":
 
-        results = (
-            driver_analyzer.get_top_k_drivers(
-                "completed_trips",
-                k
-            )
+        results = driver_analyzer.get_top_k_drivers(
+            "completed_trips",
+            k
         )
 
     elif metric == "revenue":
 
-        results = (
-            driver_analyzer.get_top_k_drivers(
-                "revenue",
-                k
-            )
+        results = driver_analyzer.get_top_k_drivers(
+            "revenue",
+            k
         )
 
     elif metric == "zone_demand":
 
-        results = (
-            zone_analyzer.get_top_k_zones(
-                "demand",
-                k
-            )
+        results = zone_analyzer.get_top_k_zones(
+            "demand",
+            k
         )
 
     elif metric == "zone_cancellation":
 
-        results = (
-            zone_analyzer.get_top_k_zones(
-                "cancellation",
-                k
-            )
+        results = zone_analyzer.get_top_k_zones(
+            "cancellation",
+            k
         )
 
     elif metric == "rider_trips":
 
-        results = (
-            trip_analyzer.get_top_k_riders(
-                k
-            )
+        results = trip_analyzer.get_top_k_riders(
+            k
         )
 
     context = get_dashboard_context()
 
-    context["errors"] = []
     context["top_k_results"] = results
     context["top_k_metric"] = metric
+    context["open_section"] = "top_k"
 
     return render_template(
         "dashboard.html",
@@ -746,14 +903,13 @@ def idle_time_analysis():
 
         return render_template(
             "index.html",
+            data_loaded=False,
             errors=[
-                "Please upload the datasets first."
+                "Upload the three datasets before running idle-time analysis."
             ]
         )
 
-    threshold = request.form.get(
-        "threshold"
-    )
+    threshold = request.form.get("threshold")
 
     try:
 
@@ -774,9 +930,9 @@ def idle_time_analysis():
 
     context = get_dashboard_context()
 
-    context["errors"] = []
     context["idle_periods"] = idle_periods
     context["idle_threshold"] = threshold
+    context["open_section"] = "idle"
 
     return render_template(
         "dashboard.html",
@@ -791,40 +947,27 @@ def utilization():
 
         return render_template(
             "index.html",
+            data_loaded=False,
             errors=[
-                "Please upload the datasets first."
+                "Upload the three datasets before running utilization analysis."
             ]
         )
 
-    high_threshold = request.form.get(
-        "high_threshold"
-    )
-
-    medium_threshold = request.form.get(
-        "medium_threshold"
-    )
+    high_threshold = request.form.get("high_threshold")
+    medium_threshold = request.form.get("medium_threshold")
 
     try:
-
-        high_threshold = float(
-            high_threshold
-        )
+        high_threshold = float(high_threshold)
     except (ValueError, TypeError):
-
         high_threshold = 70
 
     try:
-
-        medium_threshold = float(
-            medium_threshold
-        )
+        medium_threshold = float(medium_threshold)
     except (ValueError, TypeError):
-
         medium_threshold = 40
 
     utilization_results = (
-        utilization_analyzer
-        .get_driver_utilization(
+        utilization_analyzer.get_driver_utilization(
             high_threshold,
             medium_threshold
         )
@@ -832,21 +975,10 @@ def utilization():
 
     context = get_dashboard_context()
 
-    context["errors"] = []
-
-    # Replace the default dashboard utilization
-    # with the requested thresholds.
-    context["utilization_results"] = (
-        utilization_results
-    )
-
-    context["high_threshold"] = (
-        high_threshold
-    )
-
-    context["medium_threshold"] = (
-        medium_threshold
-    )
+    context["utilization_results"] = utilization_results
+    context["high_threshold"] = high_threshold
+    context["medium_threshold"] = medium_threshold
+    context["open_section"] = "utilization"
 
     return render_template(
         "dashboard.html",
@@ -861,14 +993,14 @@ def anomalies():
 
         return render_template(
             "index.html",
+            data_loaded=False,
             errors=[
-                "Please upload the datasets first."
+                "Upload the three datasets before opening anomaly detection."
             ]
         )
 
     utilization_results = (
-        utilization_analyzer
-        .get_driver_utilization(
+        utilization_analyzer.get_driver_utilization(
             70,
             40
         )
@@ -894,54 +1026,40 @@ def anomalies():
         try:
 
             thresholds["long_duration"] = float(
-                request.form.get(
-                    "long_duration"
-                )
+                request.form.get("long_duration")
             )
 
             thresholds["fare_multiplier"] = float(
-                request.form.get(
-                    "fare_multiplier"
-                )
+                request.form.get("fare_multiplier")
             )
 
             thresholds["cancellation"] = float(
-                request.form.get(
-                    "cancellation"
-                )
+                request.form.get("cancellation")
             )
 
             thresholds["utilization"] = float(
-                request.form.get(
-                    "utilization"
-                )
+                request.form.get("utilization")
             )
 
             thresholds["trip_count"] = int(
-                request.form.get(
-                    "trip_count"
-                )
+                request.form.get("trip_count")
             )
 
             thresholds["rating"] = float(
-                request.form.get(
-                    "rating"
-                )
+                request.form.get("rating")
             )
 
         except (ValueError, TypeError):
 
             pass
 
-    anomaly_results = (
-        detector.get_all_anomalies(
-            thresholds["long_duration"],
-            thresholds["fare_multiplier"],
-            thresholds["cancellation"],
-            thresholds["utilization"],
-            thresholds["trip_count"],
-            thresholds["rating"]
-        )
+    anomaly_results = detector.get_all_anomalies(
+        thresholds["long_duration"],
+        thresholds["fare_multiplier"],
+        thresholds["cancellation"],
+        thresholds["utilization"],
+        thresholds["trip_count"],
+        thresholds["rating"]
     )
 
     return render_template(
@@ -956,6 +1074,7 @@ def page_not_found(error):
 
     return render_template(
         "index.html",
+        data_loaded=data_is_loaded(),
         errors=[
             "The requested page was not found."
         ]
@@ -967,6 +1086,7 @@ def internal_error(error):
 
     return render_template(
         "index.html",
+        data_loaded=data_is_loaded(),
         errors=[
             "An unexpected application error occurred."
         ]
