@@ -13,6 +13,7 @@ class DataValidator:
             "rating",
             "status"
         ],
+
         "trips": [
             "trip_id",
             "driver_id",
@@ -28,6 +29,7 @@ class DataValidator:
             "status",
             "cancellation_reason"
         ],
+
         "activities": [
             "driver_id",
             "timestamp",
@@ -101,16 +103,19 @@ class DataValidator:
     ):
 
         if file_type == "drivers":
+
             errors = self.validate_drivers(
                 file_path
             )
 
         elif file_type == "trips":
+
             errors = self.validate_trips(
                 file_path
             )
 
         elif file_type == "activities":
+
             errors = self.validate_activities(
                 file_path
             )
@@ -164,6 +169,7 @@ class DataValidator:
                 if row["rating"].strip():
 
                     try:
+
                         rating = float(
                             row["rating"]
                         )
@@ -281,11 +287,11 @@ class DataValidator:
                             row["distance_km"]
                         )
 
-                        if distance < 0:
+                        if distance <= 0:
 
                             errors.append(
                                 f"Trips row {row_number}: "
-                                f"negative distance"
+                                f"distance must be greater than zero"
                             )
 
                     except ValueError:
@@ -403,20 +409,31 @@ class DataValidator:
 
         return errors
 
-    def validate_duplicates(self, file_path, file_type):
+    def validate_duplicates(
+        self,
+        file_path,
+        file_type
+    ):
+
         errors = []
 
-        primary_keys = self.PRIMARY_KEYS.get(file_type)
+        primary_keys = self.PRIMARY_KEYS.get(
+            file_type
+        )
 
         if not primary_keys:
             return errors
 
         with open(file_path, "r") as file:
+
             reader = csv.DictReader(file)
 
             seen = set()
 
-            for row_number, row in enumerate(reader, start=2):
+            for row_number, row in enumerate(
+                reader,
+                start=2
+            ):
 
                 key = tuple(
                     row[column].strip()
@@ -424,8 +441,10 @@ class DataValidator:
                 )
 
                 if key in seen:
+
                     errors.append(
-                        f"{file_type} row {row_number}: duplicate record"
+                        f"{file_type} row {row_number}: "
+                        f"duplicate record"
                     )
 
                 seen.add(key)

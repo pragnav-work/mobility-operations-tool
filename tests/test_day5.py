@@ -1,4 +1,3 @@
-import csv
 import os
 import tempfile
 import unittest
@@ -8,43 +7,26 @@ from datetime import datetime
 from models.driver import Driver
 from models.trip import Trip
 
-from services.validation_service import (
-    DataValidator
-)
-
-from services.trip_analyzer import (
-    TripAnalyzer
-)
+from services.validation_service import DataValidator
+from services.trip_analyzer import TripAnalyzer
 
 
 class TestDataValidation(unittest.TestCase):
 
     def setUp(self):
-
         self.validator = DataValidator()
-
         self.temp_dir = tempfile.TemporaryDirectory()
 
     def tearDown(self):
-
         self.temp_dir.cleanup()
 
-    def create_file(
-        self,
-        filename,
-        content
-    ):
-
+    def create_file(self, filename, content):
         path = os.path.join(
             self.temp_dir.name,
             filename
         )
 
-        with open(
-            path,
-            "w"
-        ) as file:
-
+        with open(path, "w") as file:
             file.write(content)
 
         return path
@@ -56,12 +38,9 @@ class TestDataValidation(unittest.TestCase):
             ""
         )
 
-        errors = (
-            self.validator
-            .validate_file_structure(
-                path,
-                "drivers"
-            )
+        errors = self.validator.validate_file_structure(
+            path,
+            "drivers"
         )
 
         self.assertTrue(
@@ -83,17 +62,35 @@ class TestDataValidation(unittest.TestCase):
             content
         )
 
-        errors = (
-            self.validator
-            .validate_file_structure(
-                path,
-                "drivers"
-            )
+        errors = self.validator.validate_file_structure(
+            path,
+            "drivers"
         )
 
         self.assertTrue(
             any(
                 "vehicle_type" in error
+                for error in errors
+            )
+        )
+
+    def test_missing_driver_value(self):
+
+        content = (
+            "driver_id,driver_name,city,vehicle_type,rating,status\n"
+            ",Asha,Bangalore,Car,4.5,Active\n"
+        )
+
+        path = self.create_file(
+            "missing_value.csv",
+            content
+        )
+
+        errors = self.validator.validate_drivers(path)
+
+        self.assertTrue(
+            any(
+                "missing" in error.lower()
                 for error in errors
             )
         )
@@ -112,12 +109,9 @@ class TestDataValidation(unittest.TestCase):
             content
         )
 
-        errors = (
-            self.validator
-            .validate_duplicates(
-                path,
-                "drivers"
-            )
+        errors = self.validator.validate_duplicates(
+            path,
+            "drivers"
         )
 
         self.assertEqual(
@@ -149,14 +143,39 @@ class TestDataValidation(unittest.TestCase):
             content
         )
 
-        errors = (
-            self.validator
-            .validate_trips(path)
-        )
+        errors = self.validator.validate_trips(path)
 
         self.assertTrue(
             any(
                 "negative fare" in error.lower()
+                for error in errors
+            )
+        )
+
+    def test_zero_distance(self):
+
+        content = (
+            "trip_id,driver_id,rider_id,city,"
+            "pickup_zone,drop_zone,request_time,"
+            "pickup_time,drop_time,distance_km,"
+            "fare,status,cancellation_reason\n"
+            "T001,D001,R001,Bangalore,Z01,Z02,"
+            "2026-01-01T10:00:00,"
+            "2026-01-01T10:05:00,"
+            "2026-01-01T10:20:00,"
+            "0,100,Completed,\n"
+        )
+
+        path = self.create_file(
+            "zero_distance.csv",
+            content
+        )
+
+        errors = self.validator.validate_trips(path)
+
+        self.assertTrue(
+            any(
+                "distance" in error.lower()
                 for error in errors
             )
         )
@@ -180,15 +199,39 @@ class TestDataValidation(unittest.TestCase):
             content
         )
 
-        errors = (
-            self.validator
-            .validate_trips(path)
-        )
+        errors = self.validator.validate_trips(path)
 
         self.assertTrue(
             any(
-                "invalid request timestamp"
-                in error.lower()
+                "invalid request timestamp" in error.lower()
+                for error in errors
+            )
+        )
+
+    def test_invalid_trip_duration(self):
+
+        content = (
+            "trip_id,driver_id,rider_id,city,"
+            "pickup_zone,drop_zone,request_time,"
+            "pickup_time,drop_time,distance_km,"
+            "fare,status,cancellation_reason\n"
+            "T001,D001,R001,Bangalore,Z01,Z02,"
+            "2026-01-01T10:00:00,"
+            "2026-01-01T10:20:00,"
+            "2026-01-01T10:05:00,"
+            "5,100,Completed,\n"
+        )
+
+        path = self.create_file(
+            "invalid_duration.csv",
+            content
+        )
+
+        errors = self.validator.validate_trips(path)
+
+        self.assertTrue(
+            any(
+                "duration" in error.lower()
                 for error in errors
             )
         )
@@ -220,12 +263,9 @@ class TestDataValidation(unittest.TestCase):
             ""
         )
 
-        errors = (
-            self.validator
-            .validate_driver_ids(
-                [trip],
-                [driver]
-            )
+        errors = self.validator.validate_driver_ids(
+            [trip],
+            [driver]
         )
 
         self.assertEqual(
@@ -236,6 +276,71 @@ class TestDataValidation(unittest.TestCase):
         self.assertIn(
             "D999",
             errors[0]
+        )
+
+    def test_driver_activity_duplicate_uses_full_record(self):
+
+        content = (
+            "driver_id,timestamp,status\n"
+            "D001,2026-01-01T10:00:00,Online\n"
+            "D001,2026-01-01T10:05:00,Busy\n"
+        )
+
+        path = self.create_file(
+            "activity.csv",
+            content
+        )
+
+        errors = self.validator.validate_duplicates(
+            path,
+            "activities"
+        )
+
+        self.assertEqual(
+            len(errors),
+            0
+        )
+
+    def test_no_matching_driver(self):
+
+        driver = Driver(
+            "D001",
+            "Asha",
+            "Bangalore",
+            "Car",
+            4.5,
+            "Active"
+        )
+
+        drivers = {
+            driver.driver_id: driver
+        }
+
+        result = drivers.get("D999")
+
+        self.assertIsNone(result)
+
+    def test_duplicate_activity_record(self):
+
+        content = (
+            "driver_id,timestamp,status\n"
+            "D001,2026-01-01T10:00:00,Online\n"
+            "D001,2026-01-01T10:00:00,Online\n"
+        )
+
+        path = self.create_file(
+            "duplicate_activity.csv",
+            content
+        )
+
+        errors = self.validator.validate_duplicates(
+            path,
+            "activities"
+        )
+
+        self.assertEqual(
+            len(errors),
+            1
         )
 
 
@@ -278,9 +383,7 @@ class TestTripAnalyzer(unittest.TestCase):
             )
         ]
 
-        self.analyzer = TripAnalyzer(
-            self.trips
-        )
+        self.analyzer = TripAnalyzer(self.trips)
 
     def test_total_trips(self):
 
@@ -312,10 +415,7 @@ class TestTripAnalyzer(unittest.TestCase):
 
     def test_status_frequency(self):
 
-        result = (
-            self.analyzer
-            .get_status_frequency()
-        )
+        result = self.analyzer.get_status_frequency()
 
         self.assertEqual(
             result["Completed"],
@@ -329,10 +429,7 @@ class TestTripAnalyzer(unittest.TestCase):
 
     def test_cancellation_intelligence(self):
 
-        result = (
-            self.analyzer
-            .get_cancellation_intelligence()
-        )
+        result = self.analyzer.get_cancellation_intelligence()
 
         self.assertEqual(
             result[0]["count"],
